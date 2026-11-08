@@ -251,5 +251,21 @@
     "75%": 21.0,
     "max": 22.0
   },
-  "seconds": 22.5
+  "run_matrices": {
+    "n_subjects": 104,
+    "dropped_subjects": [
+      79
+    ],
+    "n_per_run": {
+      "count": 104.0,
+      "mean": 12.9,
+      "std": 1.4,
+      "min": 8.0,
+      "25%": 12.0,
+      "50%": 13.0,
+      "75%": 14.0,
+      "max": 15.0
+    }
+  },
+  "seconds": 32.8
 }

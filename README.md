@@ -110,8 +110,10 @@ sujets (p < 1e-13). Détails : `reports/validation_task_cohort.json`, `reports/c
 
 wPLI, seuil proportionnel 15 % (robustesse 10 / 20 %), alpha et bêta, 105 sujets, nombre d'epochs égalisé par sujet.
 Mêmes hubs et même module sensorimoteur en MM et en MI, aucune métrique globale différente entre MM et MI
-(p de Holm ≥ 0.078). Ressemblance des arêtes MM–MI = 94 % (alpha) et 96 % (bêta) du plafond intra-condition
-mesuré à taille égale (IC 95 % bootstrap sous 1), écart du même ordre que celui de chaque tâche avec le repos.
+(p de Holm ≥ 0.078). Ressemblance des arêtes MM–MI rapportée à un plafond intra-condition à taille égale :
+94 % (alpha) et 96 % (bêta) avec des moitiés aléatoires ; avec un plafond par run à distance temporelle
+appariée, 95 % et 97 % (IC 95 % bootstrap sous 1). Sans appariement, les paires MM–MI plus proches dans le
+temps atteignent 96 % et 99.5 % (IC en bêta contenant 1). Écart faible, du même ordre que tâche vs repos.
 Chiffres : `reports/mm_vs_mi_results.json` ; conclusion et réserves dans le notebook.
 
 ## Réutilisation de code

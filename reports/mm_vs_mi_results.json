@@ -581,6 +581,200 @@
       "p_holm": 0.0
     }
   ],
+  "run_ceiling": {
+    "n_subjects": 104,
+    "n_per_run_median": 13.0,
+    "distances": [
+      {
+        "paires": "intra (6)",
+        "distance_moyenne_runs": 5.333333333333333
+      },
+      {
+        "paires": "entre, toutes (9)",
+        "distance_moyenne_runs": 3.888888888888889
+      },
+      {
+        "paires": "entre, distance appariée (6)",
+        "distance_moyenne_runs": 5.333333333333333
+      }
+    ],
+    "summary": [
+      {
+        "band": "alpha",
+        "density": 0.15,
+        "measure": "strength",
+        "comparison": "MM vs MI (runs, 9 paires)",
+        "n": 104,
+        "median_between": 0.546952,
+        "median_within": 0.583924,
+        "median_ratio": 0.987657,
+        "ratio_ci_low": 0.958545,
+        "ratio_ci_high": 1.010123,
+        "n_ratio_below_1": 55,
+        "W": 2112.0,
+        "p": 0.045064,
+        "r_rb": -0.226374,
+        "p_holm": 0.045064
+      },
+      {
+        "band": "alpha",
+        "density": 0.15,
+        "measure": "strength",
+        "comparison": "MM vs MI (runs, distance appariée)",
+        "n": 104,
+        "median_between": 0.547515,
+        "median_within": 0.583924,
+        "median_ratio": 0.97587,
+        "ratio_ci_low": 0.945245,
+        "ratio_ci_high": 0.990876,
+        "n_ratio_below_1": 66,
+        "W": 1684.0,
+        "p": 0.000694,
+        "r_rb": -0.38315,
+        "p_holm": 0.001388
+      },
+      {
+        "band": "alpha",
+        "density": NaN,
+        "measure": "edges",
+        "comparison": "MM vs MI (runs, 9 paires)",
+        "n": 104,
+        "median_between": 0.337075,
+        "median_within": 0.359757,
+        "median_ratio": 0.962535,
+        "ratio_ci_low": 0.944887,
+        "ratio_ci_high": 0.983951,
+        "n_ratio_below_1": 67,
+        "W": 1382.0,
+        "p": 1.2e-05,
+        "r_rb": -0.493773,
+        "p_holm": 1.2e-05
+      },
+      {
+        "band": "alpha",
+        "density": NaN,
+        "measure": "edges",
+        "comparison": "MM vs MI (runs, distance appariée)",
+        "n": 104,
+        "median_between": 0.334115,
+        "median_within": 0.359757,
+        "median_ratio": 0.945626,
+        "ratio_ci_low": 0.920278,
+        "ratio_ci_high": 0.957385,
+        "n_ratio_below_1": 78,
+        "W": 901.0,
+        "p": 0.0,
+        "r_rb": -0.669963,
+        "p_holm": 0.0
+      },
+      {
+        "band": "beta",
+        "density": 0.15,
+        "measure": "strength",
+        "comparison": "MM vs MI (runs, 9 paires)",
+        "n": 104,
+        "median_between": 0.824709,
+        "median_within": 0.833223,
+        "median_ratio": 0.998809,
+        "ratio_ci_low": 0.99165,
+        "ratio_ci_high": 1.004501,
+        "n_ratio_below_1": 53,
+        "W": 2478.0,
+        "p": 0.413821,
+        "r_rb": -0.092308,
+        "p_holm": 0.413821
+      },
+      {
+        "band": "beta",
+        "density": 0.15,
+        "measure": "strength",
+        "comparison": "MM vs MI (runs, distance appariée)",
+        "n": 104,
+        "median_between": 0.81134,
+        "median_within": 0.833223,
+        "median_ratio": 0.98599,
+        "ratio_ci_low": 0.976575,
+        "ratio_ci_high": 0.990816,
+        "n_ratio_below_1": 73,
+        "W": 1105.0,
+        "p": 0.0,
+        "r_rb": -0.595238,
+        "p_holm": 0.0
+      },
+      {
+        "band": "beta",
+        "density": NaN,
+        "measure": "edges",
+        "comparison": "MM vs MI (runs, 9 paires)",
+        "n": 104,
+        "median_between": 0.658383,
+        "median_within": 0.666433,
+        "median_ratio": 0.994582,
+        "ratio_ci_low": 0.988007,
+        "ratio_ci_high": 1.003947,
+        "n_ratio_below_1": 57,
+        "W": 2181.0,
+        "p": 0.075027,
+        "r_rb": -0.201099,
+        "p_holm": 0.075027
+      },
+      {
+        "band": "beta",
+        "density": NaN,
+        "measure": "edges",
+        "comparison": "MM vs MI (runs, distance appariée)",
+        "n": 104,
+        "median_between": 0.650786,
+        "median_within": 0.666433,
+        "median_ratio": 0.974427,
+        "ratio_ci_low": 0.970258,
+        "ratio_ci_high": 0.980861,
+        "n_ratio_below_1": 88,
+        "W": 618.0,
+        "p": 0.0,
+        "r_rb": -0.773626,
+        "p_holm": 0.0
+      }
+    ]
+  },
+  "run_pair_profile": {
+    "alpha edges": {
+      "entre d=1": 0.3586,
+      "entre d=3": 0.3378,
+      "entre d=5": 0.3293,
+      "entre d=7": 0.3106,
+      "entre d=9": 0.3087,
+      "intra d=4": 0.3668,
+      "intra d=8": 0.3446
+    },
+    "alpha strength": {
+      "entre d=1": 0.5732,
+      "entre d=3": 0.5689,
+      "entre d=5": 0.54,
+      "entre d=7": 0.5696,
+      "entre d=9": 0.5466,
+      "intra d=4": 0.607,
+      "intra d=8": 0.59
+    },
+    "beta edges": {
+      "entre d=1": 0.6931,
+      "entre d=3": 0.6563,
+      "entre d=5": 0.6585,
+      "entre d=7": 0.6403,
+      "entre d=9": 0.6354,
+      "intra d=4": 0.6898,
+      "intra d=8": 0.6575
+    },
+    "beta strength": {
+      "entre d=1": 0.8518,
+      "entre d=3": 0.8364,
+      "entre d=5": 0.8253,
+      "entre d=7": 0.7954,
+      "entre d=9": 0.8111,
+      "intra d=4": 0.8476,
+      "intra d=8": 0.8263
+    }
+  },
   "hubs": [
     {
       "band": "alpha",
@@ -897,9 +1091,9 @@
       "alpha 10 %": "+ p=1 ✓",
       "alpha 15 %": "+ p=1 ✓",
       "alpha 20 %": "+ p=0.86 ✓",
-      "beta 10 %": "+ p=1 ✗",
+      "beta 10 %": "+ p=1 ✓",
       "beta 15 %": "− p=1 ✓",
-      "beta 20 %": "+ p=1 ✗"
+      "beta 20 %": "+ p=1 ✓"
     },
     "clustering_weighted : MM vs MI": {
       "alpha 10 %": "− p=1 ✓",
@@ -910,20 +1104,20 @@
       "beta 20 %": "− p=1 ✓"
     },
     "clustering_weighted : MM vs REST": {
-      "alpha 10 %": "− p=1 ✗",
+      "alpha 10 %": "− p=1 ✓",
       "alpha 15 %": "+ p=1 ✓",
-      "alpha 20 %": "− p=1 ✗",
-      "beta 10 %": "+ p=1 ✗",
+      "alpha 20 %": "− p=1 ✓",
+      "beta 10 %": "+ p=1 ✓",
       "beta 15 %": "− p=1 ✓",
       "beta 20 %": "− p=1 ✓"
     },
     "global_efficiency_weighted : MI vs REST": {
       "alpha 10 %": "− p=1 ✓",
       "alpha 15 %": "− p=1 ✓",
-      "alpha 20 %": "+ p=1 ✗",
-      "beta 10 %": "+ p=1 ✗",
+      "alpha 20 %": "+ p=1 ✓",
+      "beta 10 %": "+ p=1 ✓",
       "beta 15 %": "− p=0.73 ✓",
-      "beta 20 %": "+ p=1 ✗"
+      "beta 20 %": "+ p=1 ✓"
     },
     "global_efficiency_weighted : MM vs MI": {
       "alpha 10 %": "− p=0.45 ✓",
@@ -1014,5 +1208,8 @@
       "beta 20 %": "− p=2.3e-14 * ✓"
     }
   },
-  "robustness_holds_fraction": 0.8555555555555555
+  "robustness_holds_fraction": {
+    "strict": 0.8555555555555555,
+    "lenient": 0.9444444444444444
+  }
 }

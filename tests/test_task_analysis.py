@@ -321,3 +321,91 @@ def test_global_metric_tests_and_robustness() -> None:
     assert table.loc["similarité edges : MM vs MI (entre vs intra)"].str.endswith("✓").all()
     assert str(table.loc["similarité strength : MM vs MI (entre vs intra)", "alpha 10 %"]).endswith("✗")
     assert str(table.loc["modularity : MM vs MI", "alpha 10 %"]).startswith("+")
+
+
+# --- Plafond par run, robustesse clémente --------------------------------------------------------------------
+
+from eeg_graph.task_analysis import (  # noqa: E402
+    BETWEEN_RUN_PAIRS,
+    INTRA_RUN_PAIRS,
+    MATCHED_BETWEEN_RUN_PAIRS,
+    pair_distance,
+    run_matrices,
+    run_pair_similarity,
+    run_task_epochs,
+)
+
+
+def test_run_pairs_and_distances() -> None:
+    assert INTRA_RUN_PAIRS == [(3, 7), (3, 11), (7, 11), (4, 8), (4, 12), (8, 12)]
+    assert len(BETWEEN_RUN_PAIRS) == 9
+    assert pair_distance(INTRA_RUN_PAIRS) == pytest.approx(16 / 3)
+    assert pair_distance(BETWEEN_RUN_PAIRS) == pytest.approx(35 / 9)
+    assert len(MATCHED_BETWEEN_RUN_PAIRS) == 6
+    assert pair_distance(MATCHED_BETWEEN_RUN_PAIRS) == pytest.approx(pair_distance(INTRA_RUN_PAIRS))
+
+
+def test_run_task_epochs_and_equalization() -> None:
+    results = [
+        _result(run, "mm_lr" if run in (3, 7, 11) else "mi_lr", ["left"] * (8 + k) + ["rest"] * 3, offset=100 * k)
+        for k, run in enumerate((3, 4, 7, 8, 11, 12))
+    ]
+    epochs = run_task_epochs(results)
+    assert {r: e.shape[0] for r, e in epochs.items()} == {3: 8, 4: 9, 7: 10, 8: 11, 11: 12, 12: 13}
+    out = run_matrices(epochs, subject=1)
+    assert out is not None and out.n_per_run == 8 and out.kept_runs == (3, 4, 7, 8, 11, 12)
+    assert out.matrices.shape == (6, 2, N, N) and not np.isnan(out.matrices).any()
+    # run 3 : ses 8 epochs sont toutes prises
+    np.testing.assert_allclose(out.matrices[0], epochs[3].mean(axis=0), rtol=1e-6)
+    # runs trop pauvres : MI garde 1 run -> sujet écarté ; MM garde 2 runs -> NaN pour le run écarté
+    epochs[4] = epochs[4][:3]
+    assert run_matrices(epochs, subject=1) is not None
+    epochs[8] = epochs[8][:3]
+    assert run_matrices(epochs, subject=1) is None
+
+
+def test_run_pair_similarity_skips_missing_runs() -> None:
+    rng = np.random.default_rng(5)
+    base_mm, base_mi = _sym(rng, 8), _sym(rng, 8)
+    mats = np.stack([(base_mm if r in (3, 7, 11) else base_mi) + 0.01 * _sym(rng, 8) for r in (3, 4, 7, 8, 11, 12)])
+    out = run_pair_similarity(mats, edge_spearman)
+    assert out["n_within_pairs"] == 6 and out["n_between_pairs"] == 9
+    assert out["within"] > 0.95 and out["ratio"] < 0.5
+    mats[1] = np.nan  # run 4 écarté
+    out = run_pair_similarity(mats, edge_spearman)
+    assert out["n_within_pairs"] == 4 and out["n_between_pairs"] == 6
+
+
+def test_robustness_lenient() -> None:
+    tests = pd.DataFrame(
+        [
+            {"band": "alpha", "density": d, "metric": "m", "comparison": "MM vs MI", "r_rb": r, "p_holm": 0.5}
+            for d, r in ((0.1, 0.2), (0.15, -0.1))
+        ]
+        + [
+            {"band": "alpha", "density": d, "metric": "k", "comparison": "MM vs MI", "r_rb": r, "p_holm": p}
+            for d, r, p in ((0.1, 0.4, 0.01), (0.15, -0.5, 0.01))
+        ]
+    )
+    sims = pd.DataFrame(columns=["band", "density", "measure", "comparison", "r_rb", "p_holm"])
+    strict = robustness_table(tests, sims)
+    lenient = robustness_table(tests, sims, lenient=True)
+    assert str(strict.loc["m : MM vs MI", "alpha 10 %"]).endswith("✗")
+    assert str(lenient.loc["m : MM vs MI", "alpha 10 %"]).endswith("✓")  # nul qui reste nul
+    assert str(lenient.loc["k : MM vs MI", "alpha 10 %"]).endswith("✗")  # significatif de signe opposé
+
+
+def test_run_pair_profile() -> None:
+    from eeg_graph.task_analysis import CohortRunMatrices, run_pair_profile
+
+    rng = np.random.default_rng(6)
+    mats = np.stack([[_sym(rng, N) for _ in range(2)] for _ in range(6)])[None]  # (1 sujet, 6 runs, 2 bandes, n, n)
+    mats[0, 1] = np.nan  # run 4 écarté
+    cohort = CohortRunMatrices(
+        np.array([1]), (3, 4, 7, 8, 11, 12), ("alpha", "beta"), "wpli", mats, np.array([10]), _ATLAS
+    )
+    prof = run_pair_profile(cohort, density=0.5)
+    # 6 intra + 9 entre, moins les paires avec R04 (2 intra, 3 entre) = 10 paires × 2 bandes × 2 mesures
+    assert len(prof) == 40
+    assert set(prof.loc[prof.type == "intra", "distance"]) == {4, 8}
+    assert prof.loc[prof.pair == "R03-R08", "distance"].iloc[0] == 5

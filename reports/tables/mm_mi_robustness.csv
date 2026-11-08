@@ -1,8 +1,8 @@
 result,alpha 10 %,alpha 15 %,alpha 20 %,beta 10 %,beta 15 %,beta 20 %
-clustering_weighted : MI vs REST,+ p=1 ✓,+ p=1 ✓,+ p=0.86 ✓,+ p=1 ✗,− p=1 ✓,+ p=1 ✗
+clustering_weighted : MI vs REST,+ p=1 ✓,+ p=1 ✓,+ p=0.86 ✓,+ p=1 ✓,− p=1 ✓,+ p=1 ✓
 clustering_weighted : MM vs MI,− p=1 ✓,− p=1 ✓,− p=0.84 ✓,− p=1 ✓,− p=1 ✓,− p=1 ✓
-clustering_weighted : MM vs REST,− p=1 ✗,+ p=1 ✓,− p=1 ✗,+ p=1 ✗,− p=1 ✓,− p=1 ✓
-global_efficiency_weighted : MI vs REST,− p=1 ✓,− p=1 ✓,+ p=1 ✗,+ p=1 ✗,− p=0.73 ✓,+ p=1 ✗
+clustering_weighted : MM vs REST,− p=1 ✓,+ p=1 ✓,− p=1 ✓,+ p=1 ✓,− p=1 ✓,− p=1 ✓
+global_efficiency_weighted : MI vs REST,− p=1 ✓,− p=1 ✓,+ p=1 ✓,+ p=1 ✓,− p=0.73 ✓,+ p=1 ✓
 global_efficiency_weighted : MM vs MI,− p=0.45 ✓,− p=0.078 ✓,− p=0.021 * ✗,− p=1 ✓,− p=0.6 ✓,− p=0.18 ✓
 global_efficiency_weighted : MM vs REST,− p=0.031 * ✗,− p=0.059 ✓,− p=0.2 ✓,− p=0.92 ✗,− p=0.0093 * ✓,− p=0.062 ✗
 modularity : MI vs REST,− p=1 ✓,− p=1 ✓,− p=0.91 ✓,− p=0.075 ✗,− p=0.0048 * ✓,− p=0.011 * ✓

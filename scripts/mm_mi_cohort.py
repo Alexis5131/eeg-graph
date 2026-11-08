@@ -8,7 +8,8 @@ Sorties :
 - reports/tables/cohort_mm_mi.csv : statut et epochs par sujet, raison d'exclusion ;
 - reports/cohort_mm_mi.json : statuts par run, raisons d'exclusion, distribution des epochs ;
 - reports/validation_task_cohort.json et reports/figures/validation_task_erd_cohort_*.png : ERD (tâche 1) ;
-- data/derived/matrices_mm_mi.npz (+ .csv) : matrices égalisées et moitiés split-half.
+- data/derived/matrices_mm_mi.npz (+ .csv) : matrices égalisées et moitiés split-half ;
+- data/derived/run_matrices_mm_mi.npz (+ .csv) : une matrice par run de tâche (epochs tâche égalisées entre runs).
 """
 
 from __future__ import annotations
@@ -27,7 +28,13 @@ import pandas as pd
 from eeg_graph import validation
 from eeg_graph.config import TASK_LR, Paths, setup_logging
 from eeg_graph.pipeline import DATASET
-from eeg_graph.task_analysis import build_cohort_matrices, cohort_table, save_cohort_matrices
+from eeg_graph.task_analysis import (
+    build_cohort_matrices,
+    build_run_matrices,
+    cohort_table,
+    save_cohort_matrices,
+    save_run_matrices,
+)
 from eeg_graph.viz import plot_region_values, save_figure
 
 logger = logging.getLogger("mm_mi_cohort")
@@ -99,6 +106,17 @@ def main(argv: list[str] | None = None) -> int:
     meta = save_cohort_matrices(paths.derived / "matrices_mm_mi.npz", items, matrix_atlas, "wpli", ("alpha", "beta"))
     summary["n_equalized"] = meta.n_equalized.describe().round(1).to_dict()
     summary["n_half"] = meta.n_half.describe().round(1).to_dict()
+
+    # 4. Matrices par run (plafond par run du notebook 03)
+    run_items, run_dropped, run_atlas = build_run_matrices(paths, included, metric="wpli", bands=("alpha", "beta"))
+    run_meta = save_run_matrices(
+        paths.derived / "run_matrices_mm_mi.npz", run_items, run_atlas, "wpli", ("alpha", "beta")
+    )
+    summary["run_matrices"] = {
+        "n_subjects": len(run_items),
+        "dropped_subjects": run_dropped,
+        "n_per_run": run_meta.n_per_run.describe().round(1).to_dict(),
+    }
     summary["seconds"] = round(time.perf_counter() - t0, 1)
     (reports / "cohort_mm_mi.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False, default=str))
     logger.info("Terminé en %.1f s", summary["seconds"])

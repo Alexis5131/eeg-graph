@@ -659,6 +659,239 @@ def similarity_summary(table: pd.DataFrame, n_boot: int = 5000, seed: int = SEED
     return pd.DataFrame(rows)
 
 
+# --- Plafond par run (moins optimiste que les moitiés aléatoires) -------------------------------------------
+
+MIN_RUN_EPOCHS = 8  # epochs tâche minimales pour garder un run dans le plafond par run
+
+
+def run_task_epochs(
+    results: Sequence[RecordingResult], metric: str = "wpli", bands: Sequence[str] = ("alpha", "beta")
+) -> dict[int, NDArray[np.float32]]:
+    """Epochs tâche (left + right) de chaque run de tâche : run -> (n_epochs, n_bandes, n, n)."""
+    out: dict[int, NDArray[np.float32]] = {}
+    for r in results:
+        b = [r.bands.index(band) for band in bands]
+        conn = r.conn_epochs[:, r.metrics.index(metric)][:, b]
+        out[r.run] = conn[np.isin(r.epoch_labels, TASK_LABELS)]
+    return out
+
+
+@dataclass(frozen=True)
+class RunMatrices:
+    """Matrices moyennes par run d'un sujet, à nombre d'epochs égal entre runs gardés."""
+
+    subject: int
+    matrices: NDArray[np.float32]  # (len(TASK_RUNS), n_bandes, n, n), NaN pour un run écarté
+    n_per_run: int
+    kept_runs: tuple[int, ...]
+
+
+def run_matrices(
+    epochs_by_run: Mapping[int, NDArray[np.floating]],
+    subject: int,
+    seed: int = SEED,
+    min_epochs: int = MIN_RUN_EPOCHS,
+    runs: Sequence[int] = TASK_RUNS,
+) -> RunMatrices | None:
+    """Égalise les runs gardés (≥ `min_epochs` epochs tâche) au même nombre d'epochs tirées au hasard.
+
+    Renvoie None si une condition garde moins de 2 runs (pas de paire intra-condition).
+    """
+    kept = [r for r in runs if r in epochs_by_run and epochs_by_run[r].shape[0] >= min_epochs]
+    if any(sum(r in kept for r in cond_runs) < 2 for cond_runs in CONDITION_RUNS.values()):
+        return None
+    n = min(epochs_by_run[r].shape[0] for r in kept)
+    rng = np.random.default_rng([seed, subject, 2])  # flux distinct du tirage des moitiés
+    shape = next(iter(epochs_by_run.values())).shape[1:]
+    out = np.full((len(runs), *shape), np.nan, dtype=np.float32)
+    for k, r in enumerate(runs):
+        if r in kept:
+            idx = rng.choice(epochs_by_run[r].shape[0], size=n, replace=False)
+            out[k] = epochs_by_run[r][np.sort(idx)].mean(axis=0)
+    return RunMatrices(subject, out, n, tuple(kept))
+
+
+def run_pairs(runs_a: Sequence[int], runs_b: Sequence[int] | None = None) -> list[tuple[int, int]]:
+    """Paires intra (runs_b None : combinaisons de runs_a) ou entre (produit runs_a × runs_b)."""
+    if runs_b is None:
+        return [(a, b) for i, a in enumerate(runs_a) for b in runs_a[i + 1 :]]
+    return [(a, b) for a in runs_a for b in runs_b]
+
+
+def pair_distance(pairs: Sequence[tuple[int, int]]) -> float:
+    """Distance temporelle moyenne en numéros de run."""
+    return float(np.mean([abs(a - b) for a, b in pairs]))
+
+
+INTRA_RUN_PAIRS = run_pairs(CONDITION_RUNS["MM"]) + run_pairs(CONDITION_RUNS["MI"])
+BETWEEN_RUN_PAIRS = run_pairs(CONDITION_RUNS["MM"], CONDITION_RUNS["MI"])
+# Paires entre à distance appariée : sans les runs adjacents (|Δ| = 1), les 6 paires restantes ont la même
+# distance moyenne (32 / 6) que les 6 paires intra.
+MATCHED_BETWEEN_RUN_PAIRS = [p for p in BETWEEN_RUN_PAIRS if abs(p[0] - p[1]) != 1]
+
+
+def run_pair_similarity(
+    matrices: NDArray[np.floating],
+    sim: Similarity,
+    runs: Sequence[int] = TASK_RUNS,
+    intra: Sequence[tuple[int, int]] = INTRA_RUN_PAIRS,
+    between: Sequence[tuple[int, int]] = BETWEEN_RUN_PAIRS,
+) -> dict[str, float]:
+    """Plafond par run : moyenne des similarités des paires `intra` et `between` disponibles (sans NaN).
+
+    matrices : (len(runs), n, n) pour un sujet et une bande, NaN pour un run écarté.
+    """
+    idx = {r: k for k, r in enumerate(runs)}
+
+    def mean_sim(pairs: Sequence[tuple[int, int]]) -> tuple[float, int]:
+        values = [
+            sim(np.asarray(matrices[idx[a]], np.float64), np.asarray(matrices[idx[b]], np.float64))
+            for a, b in pairs
+            if not (np.isnan(matrices[idx[a]]).any() or np.isnan(matrices[idx[b]]).any())
+        ]
+        return (float(np.mean(values)) if values else float("nan")), len(values)
+
+    within, n_within = mean_sim(intra)
+    btw, n_between = mean_sim(between)
+    return {
+        "between": btw,
+        "within": within,
+        "ratio": btw / within,
+        "n_within_pairs": n_within,
+        "n_between_pairs": n_between,
+    }
+
+
+@dataclass(frozen=True)
+class CohortRunMatrices:
+    subjects: NDArray[np.int64]
+    runs: tuple[int, ...]
+    bands: tuple[str, ...]
+    metric: str
+    matrices: NDArray[np.float32]  # (sujets, runs, bandes, n, n)
+    n_per_run: NDArray[np.int64]
+    atlas: Atlas
+
+
+def build_run_matrices(
+    paths: Paths,
+    subjects: Sequence[int],
+    metric: str = "wpli",
+    bands: Sequence[str] = ("alpha", "beta"),
+    node_space: NodeSpace = "source",
+    seed: int = SEED,
+    min_epochs: int = MIN_RUN_EPOCHS,
+) -> tuple[list[RunMatrices], list[int], Atlas]:
+    """Matrices par run de chaque sujet ; renvoie aussi les sujets écartés (moins de 2 runs par condition)."""
+    items: list[RunMatrices] = []
+    dropped: list[int] = []
+    atlas: Atlas | None = None
+    for s in subjects:
+        results = load_subject_task_results(paths, s, node_space)
+        atlas = atlas or results[0].atlas()
+        out = run_matrices(run_task_epochs(results, metric, bands), s, seed, min_epochs)
+        if out is None:
+            dropped.append(s)
+            logger.warning("S%03d écarté du plafond par run (moins de 2 runs ≥ %d epochs par condition)", s, min_epochs)
+        else:
+            items.append(out)
+    if atlas is None:
+        raise ValueError("Aucun sujet")
+    return items, dropped, atlas
+
+
+def save_run_matrices(
+    path: Path, items: Sequence[RunMatrices], atlas: Atlas, metric: str, bands: Sequence[str]
+) -> pd.DataFrame:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    meta = pd.DataFrame(
+        [{"subject": m.subject, "n_per_run": m.n_per_run, "kept_runs": " ".join(map(str, m.kept_runs))} for m in items]
+    )
+    np.savez_compressed(
+        path,
+        subjects=np.array([m.subject for m in items], dtype=np.int64),
+        runs=np.array(TASK_RUNS),
+        bands=np.array(bands),
+        metric=np.array(metric),
+        matrices=np.stack([m.matrices for m in items]),
+        n_per_run=meta.n_per_run.to_numpy(np.int64),
+        node_names=np.array(atlas.names),
+        node_hemispheres=np.array(atlas.hemispheres),
+        node_lobes=np.array(atlas.lobes),
+        node_coords_mm=atlas.coords_mm,
+    )
+    meta.to_csv(path.with_suffix(".csv"), index=False)
+    return meta
+
+
+def load_run_matrices(path: Path) -> CohortRunMatrices:
+    with np.load(path, allow_pickle=False) as f:
+        return CohortRunMatrices(
+            subjects=f["subjects"],
+            runs=tuple(int(r) for r in f["runs"]),
+            bands=tuple(f["bands"].tolist()),
+            metric=str(f["metric"]),
+            matrices=f["matrices"],
+            n_per_run=f["n_per_run"],
+            atlas=Atlas(
+                space="source",
+                names=tuple(f["node_names"].tolist()),
+                hemispheres=tuple(f["node_hemispheres"].tolist()),
+                lobes=tuple(f["node_lobes"].tolist()),
+                coords_mm=f["node_coords_mm"],
+            ),
+        )
+
+
+def run_similarity_table(cohort: CohortRunMatrices, density: float = 0.15) -> pd.DataFrame:
+    """Plafond par run, MM vs MI : toutes les paires entre (9) et paires entre à distance appariée (6).
+
+    Même format que `similarity_table` (colonnes between, within, ratio) pour réutiliser `similarity_summary`.
+    """
+    rows = []
+    measures: list[tuple[str, float, Similarity]] = [
+        ("edges", float("nan"), edge_spearman),
+        ("strength", density, strength_spearman(density)),
+    ]
+    variants = [
+        ("MM vs MI (runs, 9 paires)", BETWEEN_RUN_PAIRS),
+        ("MM vs MI (runs, distance appariée)", MATCHED_BETWEEN_RUN_PAIRS),
+    ]
+    for i, s in enumerate(cohort.subjects):
+        for k, band in enumerate(cohort.bands):
+            mats = cohort.matrices[i, :, k]
+            for measure, d, sim in measures:
+                for name, pairs in variants:
+                    rows.append(
+                        {"subject": int(s), "band": band, "density": d, "measure": measure, "comparison": name}
+                        | run_pair_similarity(mats, sim, cohort.runs, INTRA_RUN_PAIRS, pairs)
+                    )
+    return pd.DataFrame(rows)
+
+
+def run_pair_profile(cohort: CohortRunMatrices, density: float = 0.15) -> pd.DataFrame:
+    """Similarité de chaque paire de runs (intra ou entre), par sujet, bande et mesure, avec sa distance en runs.
+
+    Sert à séparer l'effet du temps (distance entre runs) de l'effet de la condition.
+    """
+    pairs = [(p, "intra") for p in INTRA_RUN_PAIRS] + [(p, "entre") for p in BETWEEN_RUN_PAIRS]
+    idx = {r: k for k, r in enumerate(cohort.runs)}
+    measures: list[tuple[str, Similarity]] = [("edges", edge_spearman), ("strength", strength_spearman(density))]
+    rows = []
+    for i, s in enumerate(cohort.subjects):
+        for k, band in enumerate(cohort.bands):
+            mats = cohort.matrices[i, :, k].astype(np.float64)
+            for (a, b), kind in pairs:
+                if np.isnan(mats[idx[a]]).any() or np.isnan(mats[idx[b]]).any():
+                    continue
+                for measure, sim in measures:
+                    rows.append(
+                        {"subject": int(s), "band": band, "measure": measure, "pair": f"R{a:02d}-R{b:02d}"}
+                        | {"type": kind, "distance": abs(a - b), "similarity": sim(mats[idx[a]], mats[idx[b]])}
+                    )
+    return pd.DataFrame(rows)
+
+
 # --- Analyse : hubs, ROI, communautés, confusion puissance (points 7, 8) ------------------------------------
 
 
@@ -721,12 +954,17 @@ def power_strength_confound(
 
 
 def robustness_table(
-    tests: pd.DataFrame, similarities: pd.DataFrame, reference_density: float = 0.15, alpha: float = 0.05
+    tests: pd.DataFrame,
+    similarities: pd.DataFrame,
+    reference_density: float = 0.15,
+    alpha: float = 0.05,
+    lenient: bool = False,
 ) -> pd.DataFrame:
     """Tableau résultat × variante (bande × densité).
 
     Cellule : sens de l'effet (signe de r_rb : « + » = a > b, ou entre > intra), p de Holm, et « tient » si
     même sens et même statut de significativité que la variante de référence (même bande, `reference_density`).
+    `lenient=True` : un résultat non significatif qui reste non significatif tient, quel que soit son signe.
     Les similarités d'arêtes ne dépendent pas du seuil : leur ligne est recopiée sur les trois densités.
     """
     t = tests.assign(result=tests.metric + " : " + tests.comparison)
@@ -738,18 +976,18 @@ def robustness_table(
     for _, row in sim.iterrows():
         for d in densities if pd.isna(row.density) else [row.density]:
             sim_rows.append(row.to_dict() | {"density": d})
-    rows = pd.concat(
-        [
-            t[["result", "band", "density", "r_rb", "p_holm"]],
-            pd.DataFrame(sim_rows)[["result", "band", "density", "r_rb", "p_holm"]],
-        ],
-        ignore_index=True,
-    )
+    cols = ["result", "band", "density", "r_rb", "p_holm"]
+    parts = [t[cols]] + ([pd.DataFrame(sim_rows)[cols]] if sim_rows else [])
+    rows = pd.concat(parts, ignore_index=True)
     rows["sign"] = np.where(rows.r_rb > 0, "+", np.where(rows.r_rb < 0, "−", "0"))
     rows["significant"] = rows.p_holm < alpha
     ref = rows.loc[np.isclose(rows.density, reference_density), ["result", "band", "sign", "significant"]]
     rows = rows.merge(ref, on=["result", "band"], how="left", suffixes=("", "_ref"))
-    rows["holds"] = (rows.sign == rows.sign_ref) & (rows.significant == rows.significant_ref)
+    same_conclusion = rows.significant == rows.significant_ref
+    if lenient:  # un résultat nul qui reste nul tient, quel que soit son signe
+        rows["holds"] = same_conclusion & (~rows.significant | (rows.sign == rows.sign_ref))
+    else:
+        rows["holds"] = same_conclusion & (rows.sign == rows.sign_ref)
     rows["cell"] = rows.apply(
         lambda r: f"{r.sign} p={r.p_holm:.2g}{' *' if r.significant else ''} {'✓' if r.holds else '✗'}", axis=1
     )
