@@ -1,0 +1,171 @@
+{
+  "V2": {
+    "files_checked": 24,
+    "passed": true
+  },
+  "V4": {
+    "median_seconds_per_recording": 6.615,
+    "minutes_for_530_recordings": 58.432500000000005
+  },
+  "V1_subject": {
+    "top_region": "inferiorparietal-rh",
+    "top10_posterior_fraction": 0.4,
+    "posterior_minus_other_log_ratio": 0.43184318118625215,
+    "passed": true
+  },
+  "V1_group": {
+    "n_subjects": 10,
+    "top_region": "cuneus-lh",
+    "top10_posterior_fraction": 0.7,
+    "posterior_minus_other_log_ratio": 0.32802661175198017,
+    "passed": true
+  },
+  "V1_wpli_posterior_block": {
+    "n_subjects": 10,
+    "mean_EO": 0.2803624033927917,
+    "mean_EC": 0.40017529129981994,
+    "n_subjects_EC_gt_EO": 9,
+    "wilcoxon_p": 0.009765625
+  },
+  "V6": {
+    "spearman": {
+      "eLORETA λ²=1": {
+        "eLORETA λ²=1": 1.0,
+        "eLORETA λ²=0.111": 0.424,
+        "eLORETA λ²=0.01": 0.296,
+        "dSPM λ²=1": 0.956,
+        "dSPM λ²=0.111": 0.507,
+        "dSPM λ²=0.01": 0.321,
+        "MNE λ²=1": 0.936,
+        "MNE λ²=0.111": 0.468,
+        "MNE λ²=0.01": 0.295
+      },
+      "eLORETA λ²=0.111": {
+        "eLORETA λ²=1": 0.424,
+        "eLORETA λ²=0.111": 1.0,
+        "eLORETA λ²=0.01": 0.554,
+        "dSPM λ²=1": 0.367,
+        "dSPM λ²=0.111": 0.883,
+        "dSPM λ²=0.01": 0.558,
+        "MNE λ²=1": 0.371,
+        "MNE λ²=0.111": 0.885,
+        "MNE λ²=0.01": 0.514
+      },
+      "eLORETA λ²=0.01": {
+        "eLORETA λ²=1": 0.296,
+        "eLORETA λ²=0.111": 0.554,
+        "eLORETA λ²=0.01": 1.0,
+        "dSPM λ²=1": 0.25,
+        "dSPM λ²=0.111": 0.493,
+        "dSPM λ²=0.01": 0.832,
+        "MNE λ²=1": 0.244,
+        "MNE λ²=0.111": 0.524,
+        "MNE λ²=0.01": 0.87
+      },
+      "dSPM λ²=1": {
+        "eLORETA λ²=1": 0.956,
+        "eLORETA λ²=0.111": 0.367,
+        "eLORETA λ²=0.01": 0.25,
+        "dSPM λ²=1": 1.0,
+        "dSPM λ²=0.111": 0.488,
+        "dSPM λ²=0.01": 0.298,
+        "MNE λ²=1": 0.981,
+        "MNE λ²=0.111": 0.443,
+        "MNE λ²=0.01": 0.266
+      },
+      "dSPM λ²=0.111": {
+        "eLORETA λ²=1": 0.507,
+        "eLORETA λ²=0.111": 0.883,
+        "eLORETA λ²=0.01": 0.493,
+        "dSPM λ²=1": 0.488,
+        "dSPM λ²=0.111": 1.0,
+        "dSPM λ²=0.01": 0.562,
+        "MNE λ²=1": 0.5,
+        "MNE λ²=0.111": 0.946,
+        "MNE λ²=0.01": 0.492
+      },
+      "dSPM λ²=0.01": {
+        "eLORETA λ²=1": 0.321,
+        "eLORETA λ²=0.111": 0.558,
+        "eLORETA λ²=0.01": 0.832,
+        "dSPM λ²=1": 0.298,
+        "dSPM λ²=0.111": 0.562,
+        "dSPM λ²=0.01": 1.0,
+        "MNE λ²=1": 0.291,
+        "MNE λ²=0.111": 0.588,
+        "MNE λ²=0.01": 0.901
+      },
+      "MNE λ²=1": {
+        "eLORETA λ²=1": 0.936,
+        "eLORETA λ²=0.111": 0.371,
+        "eLORETA λ²=0.01": 0.244,
+        "dSPM λ²=1": 0.981,
+        "dSPM λ²=0.111": 0.5,
+        "dSPM λ²=0.01": 0.291,
+        "MNE λ²=1": 1.0,
+        "MNE λ²=0.111": 0.462,
+        "MNE λ²=0.01": 0.261
+      },
+      "MNE λ²=0.111": {
+        "eLORETA λ²=1": 0.468,
+        "eLORETA λ²=0.111": 0.885,
+        "eLORETA λ²=0.01": 0.524,
+        "dSPM λ²=1": 0.443,
+        "dSPM λ²=0.111": 0.946,
+        "dSPM λ²=0.01": 0.588,
+        "MNE λ²=1": 0.462,
+        "MNE λ²=0.111": 1.0,
+        "MNE λ²=0.01": 0.536
+      },
+      "MNE λ²=0.01": {
+        "eLORETA λ²=1": 0.295,
+        "eLORETA λ²=0.111": 0.514,
+        "eLORETA λ²=0.01": 0.87,
+        "dSPM λ²=1": 0.266,
+        "dSPM λ²=0.111": 0.492,
+        "dSPM λ²=0.01": 0.901,
+        "MNE λ²=1": 0.261,
+        "MNE λ²=0.111": 0.536,
+        "MNE λ²=0.01": 1.0
+      }
+    },
+    "posterior_block": [
+      {
+        "variant": "eLORETA λ²=1",
+        "posterior_block_wpli": 0.4062781142058715
+      },
+      {
+        "variant": "eLORETA λ²=0.111",
+        "posterior_block_wpli": 0.4241693765898935
+      },
+      {
+        "variant": "eLORETA λ²=0.01",
+        "posterior_block_wpli": 0.4356725308435415
+      },
+      {
+        "variant": "dSPM λ²=1",
+        "posterior_block_wpli": 0.4071768276831683
+      },
+      {
+        "variant": "dSPM λ²=0.111",
+        "posterior_block_wpli": 0.43200719979853414
+      },
+      {
+        "variant": "dSPM λ²=0.01",
+        "posterior_block_wpli": 0.43819328227074317
+      },
+      {
+        "variant": "MNE λ²=1",
+        "posterior_block_wpli": 0.40362558479792154
+      },
+      {
+        "variant": "MNE λ²=0.111",
+        "posterior_block_wpli": 0.4282146620205025
+      },
+      {
+        "variant": "MNE λ²=0.01",
+        "posterior_block_wpli": 0.4339975048513973
+      }
+    ]
+  }
+}

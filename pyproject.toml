@@ -1,0 +1,66 @@
+[project]
+name = "eeg-graph"
+version = "0.1.0"
+description = "Pipeline EEG -> graphe de connectivité cérébrale (espace source ou capteurs)"
+readme = "README.md"
+authors = [
+    { name = "Alexis", email = "aarnaud@albertschool.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "mne>=1.13,<1.14",
+    "mne-connectivity==0.9.*",
+    "networkx>=3.7",
+    "nibabel>=5.4.2",
+    "numpy>=2.5.4",
+    "pandas>=3.1.1",
+    "plotly>=7.1.0",
+    "python-picard>=0.8.2",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.6,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+    "mypy>=2.4.1",
+    "nbconvert>=7.17.2",
+    "nbformat>=5.11.1",
+    "nbstripout>=0.9.1",
+    "pandas-stubs>=3.1.0.261029",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "NPY", "PTH"]
+ignore = ["RUF001", "RUF002", "RUF003"]  # caractères non ASCII (λ, ×, µ) voulus dans les textes français
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff.lint.flake8-bugbear]
+# dataclasses figées : valeurs par défaut immuables
+extend-immutable-calls = [
+    "eeg_graph.config.Paths",
+    "eeg_graph.config.PipelineConfig",
+    "eeg_graph.config.PreprocConfig",
+    "eeg_graph.config.InverseConfig",
+    "eeg_graph.config.EEGMMIDBSpec",
+]
