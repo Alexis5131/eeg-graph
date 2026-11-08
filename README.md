@@ -61,6 +61,7 @@ RAM pour 4 workers (~1.2 Go par worker). Temps mesurés sur un Mac 8 cœurs, 16 
 | 3 | `notebooks/01_eeg_to_graph.ipynb` | validation de la chaîne sur le repos yeux ouverts / fermés (effet Berger, V1-V6), graphe et métriques d'un sujet | 59 s (données présentes) ; au premier lancement, + téléchargement de R01/R02 et de fsaverage | ~60 Mo de cache |
 | 4 | `notebooks/02_task_erd_validation.ipynb` | découpage des runs de tâche et contrôle ERD sur les sujets 1-10 | 17 s si le cache existe ; sinon il calcule les 10 sujets (~100 s sur 4 workers + téléchargements) | inclus dans l'étape 1 |
 | 5 | `notebooks/03_mm_vs_mi.ipynb` | **analyse** : graphes de groupe, comparaison par sujet, robustesse, conclusion | 2-3 min (134 s mesurées ; 173 s sur un clone neuf) | < 5 Mo de sorties |
+| 6 | `uv run python scripts/make_results_summary.py` | régénère `reports/results_summary.md` depuis les tableaux, JSON et cellules « Conclusion » / « Limites » du notebook 03 | < 5 s | < 50 ko |
 
 Un notebook s'exécute sans interface avec :
 
@@ -89,7 +90,7 @@ uv run ruff check . && uv run ruff format --check . && uv run mypy src tests
 | Chemin | Contenu |
 |---|---|
 | `src/eeg_graph/` | package : chargement, prétraitement, espace source, connectivité, cache, graphe, métriques, validation, `task_analysis` (analyse MM / MI) |
-| `scripts/` | `build_cache.py` (cache de la cohorte), `mm_mi_cohort.py` (inclusion, ERD, matrices dérivées) |
+| `scripts/` | `build_cache.py` (cache de la cohorte), `mm_mi_cohort.py` (inclusion, ERD, matrices dérivées), `make_results_summary.py` (synthèse des résultats) |
 | `notebooks/` | 01 validation repos, 02 validation ERD, 03 analyse MM vs MI |
 | `tests/` | tests unitaires (pytest) |
 | `data/derived/` | matrices dérivées versionnées (le reste de `data/` est ignoré) |
