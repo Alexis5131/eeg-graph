@@ -34,8 +34,9 @@ mal annotées (sans effet : on découpe tout le run).
 | Epochs | `preprocessing.py` | fenêtres fixes (repos : 4 s, ou 5 × 12 s pour le protocole de Fraschini) ou autour d'événements (runs de tâche poing gauche / droit, réel R03/R07/R11 et imaginé R04/R08/R12 : découpage `task_lr`, 0.5-4.0 s après T0 → `rest`, T1 → `left`, T2 → `right`) ; rejet par z-score robuste (> 3) de l'amplitude crête-à-crête max, plafond 1 mV |
 | Nœuds source | `source.py` | forward fsaverage (BEM 3 couches, ico-5, `mindist=5`), covariance ad hoc, eLORETA, `loose=0.2`, `depth=0.8`, `pick_ori="normal"`, λ² = 1 ; 68 labels `aparc` ; extraction `mean_flip` |
 | Connectivité | `connectivity.py` | par bande (δ 1-4, θ 4-8, α 8-13, β 13-30, γ 30-45 Hz) : filtre FIR sur le signal continu → Hilbert → par epoch : **wPLI**, **ciPLV**, **AEC orthogonalisée** ; matrice d'un enregistrement = moyenne des epochs |
-| Cache | `cache.py` | un `.npz` par (sujet, run, découpage) : `conn (3, 5, n, n)`, `conn_epochs (n_epochs, 3, 5, n, n)`, `power_epochs`, attributs des nœuds, métadonnées ; `index.csv` |
+| Cache | `cache.py` | un `.npz` par (sujet, run, découpage) : `conn (3, 5, n, n)`, `conn_epochs (n_epochs, 3, 5, n, n)`, `power_epochs`, attributs des nœuds, métadonnées ; `index.csv` (mis à jour sous verrou : les workers écrivent en parallèle) |
 | Graphe | `graph.py` | seuillage proportionnel (10/15/20 % des paires) ou graphe pondéré complet ; union avec l'arbre couvrant maximal en option ; distance = 1/poids |
+| Conditions MM / MI / REST | `task_analysis.py` | runs de tâche : MM = left + right de R03/R07/R11, MI = left + right de R04/R08/R12, REST = T0 des 6 runs ; par sujet, même nombre d'epochs n = min(n_MM, n_MI, n_REST) tiré au hasard (`SEED`, par sujet), moitiés split-half A / B de n // 2 epochs ; matrice = moyenne des epochs |
 | Métriques | `metrics.py` | ordre, taille, densité, composantes, diamètre/rayon (sauts, sur la plus grande composante si non connexe), degré/strength, betweenness, closeness, eigenvector, clustering binaire et pondéré, efficacité globale binaire et pondérée, assortativité, Louvain (100 seeds, co-assignation, NMI/ARI vs lobes), spectre du Laplacien, connectivité algébrique, mesures de l'arbre couvrant |
 
 **Noyau inverse fixe.** Template commun + covariance ad hoc + mêmes électrodes ⇒ l'opérateur inverse est le
@@ -73,8 +74,16 @@ uv run pytest                                      # tests unitaires + équivale
 uv run ruff check . && uv run ruff format . && uv run mypy src tests
 ```
 
-Sorties : `data/cache/eegmmidb/` (matrices, `index.csv`), `reports/figures/`, `reports/tables/`,
-`reports/validation_source.json`, `reports/validation_task.json`.
+Cohorte des runs de tâche (en ligne de commande, calcul long) :
+
+```bash
+uv run python scripts/build_cache.py --subjects 1-109 --runs 3,4,7,8,11,12 --n-jobs 4   # logs dans logs/
+uv run python scripts/mm_mi_cohort.py   # inclusion, ERD sur la cohorte, matrices égalisées
+```
+
+Sorties : `data/cache/eegmmidb/` (matrices, `index.csv`), `data/derived/matrices_mm_mi.npz` (+ `.csv`),
+`reports/figures/`, `reports/tables/` (dont `cohort_mm_mi.csv`), `reports/validation_source.json`,
+`reports/validation_task.json`, `reports/validation_task_cohort.json`, `reports/cohort_mm_mi.json`, `logs/`.
 
 ## Validation (EEGMMIDB R01/R02)
 
@@ -89,6 +98,9 @@ log10 P (epochs gauche + droite) − log10 P (epochs T0), ROI = precentral, post
 côtés. Détails et chiffres : `reports/validation_task.json`. En alpha et en bêta, MM et MI : la ROI est
 surreprésentée dans les 10 régions les plus négatives (5, 6, 3 et 4 régions sur 6 ; p hypergéométrique ≤ 0.037),
 l'ERD de la ROI est négative (Wilcoxon unilatéral p ≤ 0.0049) et plus forte en MM qu'en MI (p ≤ 0.002).
+Sur la cohorte (105 sujets inclus sur 109, `scripts/mm_mi_cohort.py`) : 6, 6, 5 et 6 régions ROI sur 6 dans le
+top 10 ; ERD de la ROI négative chez 91 à 104 sujets (p < 1e-15) ; plus forte en MM chez 90 (alpha) et 97 (bêta)
+sujets (p < 1e-13). Détails : `reports/validation_task_cohort.json`, `reports/cohort_mm_mi.json`.
 
 ## Réutilisation de code
 

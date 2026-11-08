@@ -310,3 +310,31 @@ def task_erd_report(
                 roi_mean(erds["mm_lr", band], atlas, roi), roi_mean(erds["mi_lr", band], atlas, roi)
             )
     return report
+
+
+def cohort_erd(
+    paths: Paths,
+    subjects: Sequence[int],
+    node_space: NodeSpace = "source",
+    bands: Sequence[str] = ("alpha", "beta"),
+    conditions: Sequence[str] = TASK_CONDITIONS,
+) -> tuple[dict[tuple[str, str], NDArray[np.float64]], Atlas, list[int]]:
+    """ERD par sujet sur une cohorte, sujet par sujet pour borner la mémoire.
+
+    Retour : (condition, bande) -> (n_sujets, n_régions), atlas, sujets retenus (ceux qui ont toutes les
+    conditions), dans l'ordre de `subjects`.
+    """
+    rows: dict[tuple[str, str], list[NDArray[np.float64]]] = {(c, b): [] for c in conditions for b in bands}
+    kept: list[int] = []
+    atlas: Atlas | None = None
+    for s in subjects:
+        one = load_task_results(paths, [s], node_space)
+        if s not in one or not all(c in one[s] for c in conditions):
+            continue
+        for key, values in erd_by_subject(one, bands, conditions).items():
+            rows[key].append(values[0])
+        atlas = atlas or one[s][conditions[0]][0].atlas()
+        kept.append(s)
+    if atlas is None:
+        raise ValueError("Aucun sujet avec toutes les conditions")
+    return {key: np.stack(v) for key, v in rows.items()}, atlas, kept

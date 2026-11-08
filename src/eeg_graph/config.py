@@ -48,6 +48,11 @@ class Paths:
         return self.data / "cache"
 
     @property
+    def derived(self) -> Path:
+        """Agrégats calculés à partir du cache (matrices par sujet et condition)."""
+        return self.data / "derived"
+
+    @property
     def figures(self) -> Path:
         return self.root / "reports" / "figures"
 

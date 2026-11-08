@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from dataclasses import replace
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from eeg_graph.cache import RecordingResult
+from eeg_graph.cache import RecordingResult, result_path, save_result
+from eeg_graph.config import Paths
 from eeg_graph.nodes import Atlas
 from eeg_graph.validation import (
     MOTOR_ROI,
+    cohort_erd,
     epoch_label_counts,
     erd,
     erd_by_subject,
@@ -119,3 +124,24 @@ def test_task_erd_report_structure() -> None:
         "c_mm_vs_mi_alpha",
         "c_mm_vs_mi_beta",
     }
+
+
+def test_cohort_erd_streams_from_cache(tmp_path: Path) -> None:
+    paths = Paths(root=tmp_path)
+    rng = np.random.default_rng(1)
+    n = len(_NAMES)
+    labels = ["rest", "left", "right"] * 3
+    expected = {}
+    for s in (1, 2, 3):
+        for cond, run in (("mm_lr", 3), ("mi_lr", 4)):
+            if s == 3 and cond == "mi_lr":
+                continue  # sujet 3 sans MI : écarté
+            r = replace(_task_result(rng.normal(size=(9, n)), labels, run=run, condition=cond), subject=s)
+            save_result(r, result_path(paths.cache, "eegmmidb", "source", s, run, "task_lr"))
+            expected[s, cond] = erd([r], "alpha")
+    erds, atlas, kept = cohort_erd(paths, [1, 2, 3])
+    assert kept == [1, 2]
+    assert atlas.names == _NAMES
+    np.testing.assert_allclose(
+        erds["mi_lr", "alpha"], np.stack([expected[1, "mi_lr"], expected[2, "mi_lr"]]), rtol=1e-6
+    )
