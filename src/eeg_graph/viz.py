@@ -114,15 +114,31 @@ def plot_circular_graph(
     ax.axis("off")
 
 
-def plot_region_values(ax: Axes, values: NDArray[np.floating], atlas: Atlas, title: str, top: int = 20) -> None:
-    """Barres horizontales des `top` plus grandes valeurs, colorées par lobe."""
-    order = np.argsort(values)[::-1][:top]
+def plot_region_values(
+    ax: Axes,
+    values: NDArray[np.floating],
+    atlas: Atlas,
+    title: str,
+    top: int = 20,
+    largest: bool = True,
+    highlight: Sequence[str] = (),
+) -> None:
+    """Barres horizontales des `top` plus grandes valeurs (plus petites si `largest=False`), colorées par lobe.
+
+    Les régions de `highlight` (ex. une ROI) ont leur étiquette en gras.
+    """
+    ranked = np.argsort(values)
+    order = (ranked[::-1] if largest else ranked)[:top]
     ax.barh(range(len(order)), values[order], color=[LOBE_COLORS[atlas.lobes[i]] for i in order])
     ax.set_yticks(range(len(order)), [atlas.names[i] for i in order], fontsize=6)
+    for tick, i in zip(ax.get_yticklabels(), order, strict=True):
+        if atlas.names[i] in highlight:
+            tick.set_fontweight("bold")
     ax.invert_yaxis()
     ax.set_title(title, fontsize=10)
     present = [lobe for lobe in LOBE_ORDER if lobe in set(atlas.lobes)]
-    ax.legend(handles=[Patch(color=LOBE_COLORS[lobe], label=lobe) for lobe in present], fontsize=6, loc="lower right")
+    handles = [Patch(color=LOBE_COLORS[lobe], label=lobe) for lobe in present]
+    ax.legend(handles=handles, fontsize=6, loc="lower right" if largest else "lower left")
 
 
 # --- Graphe dans le cerveau -------------------------------------------------------------------------------

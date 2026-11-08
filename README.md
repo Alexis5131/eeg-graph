@@ -31,7 +31,7 @@ mal annotées (sans effet : on découpe tout le run).
 |---|---|---|
 | Chargement | `loading.py` | `eegbci.load_data`, `standardize`, montage `fsaverage_1005` |
 | Prétraitement | `preprocessing.py` | FIR zero-phase 0.5-45 Hz ; référence moyenne (projecteur) ; ICA picard 20 composantes par sujet (ajustée sur copie filtrée 1 Hz, runs concaténés) ; composantes oculaires par corrélation avec Fp1/Fp2 (pas de canal EOG), 3 max |
-| Epochs | `preprocessing.py` | fenêtres fixes (repos : 4 s, ou 5 × 12 s pour le protocole de Fraschini) ou autour d'événements (imagerie : 0.5-4.0 s après T1/T2) ; rejet par z-score robuste (> 3) de l'amplitude crête-à-crête max, plafond 1 mV |
+| Epochs | `preprocessing.py` | fenêtres fixes (repos : 4 s, ou 5 × 12 s pour le protocole de Fraschini) ou autour d'événements (runs de tâche poing gauche / droit, réel R03/R07/R11 et imaginé R04/R08/R12 : découpage `task_lr`, 0.5-4.0 s après T0 → `rest`, T1 → `left`, T2 → `right`) ; rejet par z-score robuste (> 3) de l'amplitude crête-à-crête max, plafond 1 mV |
 | Nœuds source | `source.py` | forward fsaverage (BEM 3 couches, ico-5, `mindist=5`), covariance ad hoc, eLORETA, `loose=0.2`, `depth=0.8`, `pick_ori="normal"`, λ² = 1 ; 68 labels `aparc` ; extraction `mean_flip` |
 | Connectivité | `connectivity.py` | par bande (δ 1-4, θ 4-8, α 8-13, β 13-30, γ 30-45 Hz) : filtre FIR sur le signal continu → Hilbert → par epoch : **wPLI**, **ciPLV**, **AEC orthogonalisée** ; matrice d'un enregistrement = moyenne des epochs |
 | Cache | `cache.py` | un `.npz` par (sujet, run, découpage) : `conn (3, 5, n, n)`, `conn_epochs (n_epochs, 3, 5, n, n)`, `power_epochs`, attributs des nœuds, métadonnées ; `index.csv` |
@@ -59,7 +59,11 @@ uv run jupyter nbconvert --to notebook --execute --inplace notebooks/01_eeg_to_g
 ```
 
 Les paramètres (sujet, runs, mode de nœuds, métrique, bande, seuils, sujets du batch) sont dans la
-deuxième cellule de code. Les sorties du notebook sont retirées automatiquement à chaque commit
+deuxième cellule de code.
+
+Runs de tâche : [`notebooks/02_task_erd_validation.ipynb`](notebooks/02_task_erd_validation.ipynb) construit
+le cache des runs R03/R04/R07/R08/R11/R12 (sujets 1 à 10, ~30 s par sujet sur 4 workers) et vérifie l'ERD
+sensorimotrice ; il écrit `reports/validation_task.json` et `reports/figures/validation_task_erd_*.png`. Les sorties du notebook sont retirées automatiquement à chaque commit
 (filtre git `nbstripout`, déclaré dans `.gitattributes`).
 
 Contrôle qualité du code :
@@ -70,13 +74,21 @@ uv run ruff check . && uv run ruff format . && uv run mypy src tests
 ```
 
 Sorties : `data/cache/eegmmidb/` (matrices, `index.csv`), `reports/figures/`, `reports/tables/`,
-`reports/validation_source.json`.
+`reports/validation_source.json`, `reports/validation_task.json`.
 
 ## Validation (EEGMMIDB R01/R02)
 
 Voir `reports/note_pipeline.md`. Résumé : effet Berger retrouvé en source (puissance alpha EC/EO maximale
 en occipital, 10 sujets), bloc wPLI alpha pariéto-occipital plus fort yeux fermés (9/10 sujets, Wilcoxon
 p = 0.0098), matrices valides, ~7 s par enregistrement.
+
+## Validation (EEGMMIDB runs de tâche, contrôle ERD)
+
+10 sujets, runs R03/R07/R11 (mouvement réel, MM) et R04/R08/R12 (mouvement imaginé, MI). ERD par région =
+log10 P (epochs gauche + droite) − log10 P (epochs T0), ROI = precentral, postcentral, paracentral des deux
+côtés. Détails et chiffres : `reports/validation_task.json`. En alpha et en bêta, MM et MI : la ROI est
+surreprésentée dans les 10 régions les plus négatives (5, 6, 3 et 4 régions sur 6 ; p hypergéométrique ≤ 0.037),
+l'ERD de la ROI est négative (Wilcoxon unilatéral p ≤ 0.0049) et plus forte en MM qu'en MI (p ≤ 0.002).
 
 ## Réutilisation de code
 
@@ -88,6 +100,8 @@ p = 0.0098), matrices valides, ~7 s par enregistrement.
   - ICA : https://mne.tools/stable/auto_tutorials/preprocessing/40_artifact_correction_ica.html
   - connectivité de labels : https://mne.tools/mne-connectivity/stable/auto_examples/mne_inverse_label_connectivity.html
   - principe de la matrice de résolution : https://mne.tools/stable/generated/mne.minimum_norm.make_inverse_resolution_matrix.html
+- Définition de l'ERD (`validation.erd`, puissance pendant la tâche rapportée à une référence de repos) :
+  Pfurtscheller G., Lopes da Silva F. H. (1999). Méthode reprise de l'article, pas de code.
 - Aucun code existant spécifique à EEGMMIDB n'a été repris.
 - Bibliothèques : MNE-Python, mne-connectivity, python-picard, NumPy, SciPy, pandas, NetworkX,
   scikit-learn, matplotlib.
@@ -112,5 +126,6 @@ relus et validés par le groupe. *À compléter par le groupe avant le rendu.*
 - Nolan H., Whelan R., Reilly R. B. (2010). FASTER. J Neurosci Methods 192(1):152-162.
 - Mahjoory K. et al. (2017). Consistency of EEG source localization and connectivity estimates. NeuroImage 152:590-601.
 - Fraschini M., La Cava S. M., Didaci L., Barberini L. (2021). On the variability of functional connectivity and network measures in source-reconstructed EEG time-series. Entropy 23(1):5. arXiv:2007.05395.
+- Pfurtscheller G., Lopes da Silva F. H. (1999). Event-related EEG/MEG synchronization and desynchronization: basic principles. Clin Neurophysiol 110(11):1842-1857.
 - Rubinov M., Sporns O. (2010). Complex network measures of brain connectivity. NeuroImage 52(3):1059-1069.
 - Blondel V. D. et al. (2008). Louvain. J Stat Mech P10008.

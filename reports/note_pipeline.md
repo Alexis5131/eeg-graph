@@ -7,6 +7,7 @@
 5. **Métriques** : wPLI, ciPLV, AEC orthogonalisée sur signal analytique (filtre FIR continu puis Hilbert), par epoch ; enregistrement = moyenne des epochs.
 6. **Rejet d'epochs** : un seuil fixe de 150 µV rejetait 100 % des epochs de S001 (alpha EC à 400-500 µV crête-à-crête en occipital). Remplacé par un z-score robuste > 3 par enregistrement, pour éviter un biais de condition.
 7. **Vérifié** : effet Berger en source (V1 ; S001, top = inferiorparietal-rh ; 10 sujets, top = cuneus-lh, 7/10 des régions de tête pariéto-occipitales) ; bloc wPLI alpha postérieur EC > EO (9/10 sujets, Wilcoxon p = 0.0098) ; validité des matrices (V2, 22 fichiers) ; 34 tests unitaires ; mode capteurs opérationnel.
-8. **Non vérifié** : V3 (direction des effets de Fraschini sur 20 sujets) ; MST-union dans une analyse réelle ; runs d'imagerie (R04/R08/R12) jamais traités ; datasets sommeil / épilepsie ; dérivations bipolaires.
+8. **Non vérifié** : V3 (direction des effets de Fraschini sur 20 sujets) ; MST-union dans une analyse réelle ; datasets sommeil / épilepsie ; dérivations bipolaires.
 9. **Limites** : pas d'IRM individuelle (template fsaverage) ; plancher de bruit du wPLI sur 4 s ; ICA à 20 composantes avec Fp1/Fp2 comme proxy EOG.
 10. **Suite** : choisir use case et dataset, puis `build_cache.py` sur la cohorte et analyse.
+11. **Runs de tâche (8/11/2026)** : découpage `task_lr` (T0/T1/T2, 0.5-4.0 s, aucune fenêtre ne déborde sur la consigne suivante sur S001). 10 sujets × 6 runs : 95.1 % des epochs rest et 96.4 % des epochs tâche retenues ; ~31 s par sujet (4 workers) ; ~6 Mo par fichier, ~1.8 Go extrapolés pour 50 sujets × 6 runs. ERD alpha/bêta sensorimotrice retrouvée en MM et en MI, plus forte en MM (`reports/validation_task.json`).

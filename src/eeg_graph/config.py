@@ -133,8 +133,16 @@ class EpochSpec:
 REST_4S = EpochSpec(name="rest4s", kind="fixed", length=4.0, label="rest")
 # Protocole de Fraschini et al. (Entropy 2021) : 5 epochs de 12 s.
 REST_12S = EpochSpec(name="rest12s", kind="fixed", length=12.0, label="rest")
-# T1/T2 durent 4.1 s puis T0 : on évite la réponse visuelle au cue et le débordement sur le repos.
-MI_LEFT_RIGHT = EpochSpec(name="mi_lr", kind="events", events=(("T1", "left"), ("T2", "right")), tmin=0.5, tmax=4.0)
+# Runs de tâche poing gauche / droit (réel R03/R07/R11, imaginé R04/R08/R12) : T1/T2 durent 4.1 s, T0 4.2 s.
+# Fenêtre 0.5-4.0 s après l'onset : on évite la réponse visuelle à la consigne et le débordement sur la
+# consigne suivante. Les pauses T0 de ces runs fournissent la condition de repos.
+TASK_LR = EpochSpec(
+    name="task_lr",
+    kind="events",
+    events=(("T0", "rest"), ("T1", "left"), ("T2", "right")),
+    tmin=0.5,
+    tmax=4.0,
+)
 
 
 @dataclass(frozen=True)
@@ -170,8 +178,8 @@ class EEGMMIDBSpec:
     def epoch_spec(self, run: int) -> EpochSpec:
         if run in self.baseline_runs:
             return REST_4S
-        if self.conditions[run] == "mi_lr":
-            return MI_LEFT_RIGHT
+        if self.conditions[run] in ("mm_lr", "mi_lr"):
+            return TASK_LR
         raise ValueError(f"Pas d'EpochSpec par défaut pour le run {run} ({self.conditions[run]})")
 
 

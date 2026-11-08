@@ -92,3 +92,15 @@ def test_fsaverage_mesh_contains_dk_centroids() -> None:
     centroids = source_atlas(load_dk_labels(_PATHS), _PATHS).coords_mm
     assert (centroids >= mesh.vertices_mm.min(axis=0)).all()
     assert (centroids <= mesh.vertices_mm.max(axis=0)).all()
+
+
+@pytest.mark.parametrize("largest", [True, False])
+def test_plot_region_values_order(largest: bool) -> None:
+    from eeg_graph.viz import plot_region_values
+
+    _, ax = plt.subplots()
+    plot_region_values(ax, np.array([0.5, -2.0, 1.0, -1.0]), _ATLAS, "t", top=2, largest=largest, highlight=["occ-rh"])
+    labels = [t.get_text() for t in ax.get_yticklabels()]
+    assert labels == (["front-lh", "occ-lh"] if largest else ["occ-rh", "front-rh"])
+    bold = {t.get_text() for t in ax.get_yticklabels() if t.get_fontweight() == "bold"}
+    assert bold == (set() if largest else {"occ-rh"})
