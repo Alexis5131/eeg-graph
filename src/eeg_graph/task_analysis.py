@@ -617,7 +617,10 @@ def similarity_table(
 def bootstrap_median_ci(
     x: NDArray[np.floating], n_boot: int = 5000, seed: int = SEED, level: float = 0.95
 ) -> tuple[float, float, float]:
-    """Médiane et IC percentile par bootstrap sur les sujets (rééchantillonnage avec remise)."""
+    """Médiane et IC percentile par bootstrap sur les sujets (rééchantillonnage avec remise).
+
+    Bootstrap percentile : Efron B., Tibshirani R. J. (1993), An Introduction to the Bootstrap.
+    """
     x = np.asarray(x, dtype=np.float64)
     rng = np.random.default_rng(seed)
     medians = np.median(x[rng.integers(0, x.size, size=(n_boot, x.size))], axis=1)

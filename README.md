@@ -1,31 +1,101 @@
-# eeg-source-graph
+# Bouger ou imaginer bouger : est-ce le même réseau cérébral ?
 
-Pipeline générique **EEG → graphe de connectivité cérébrale** pour le projet Graph Analytics 2026
-(Albert School, MSA-DAT07-05). Un enregistrement EEG multicanal devient, pour chaque bande de fréquence
-et chaque métrique de connectivité, un graphe pondéré non orienté simple dont les nœuds sont :
+Projet Graph Analytics 2026 (Albert School, MSA-DAT07-05). À partir de l'EEG de 105 sujets, on construit un
+graphe de connectivité cérébrale (68 régions corticales Desikan-Killiany en espace source, arêtes pondérées
+par le wPLI, bandes alpha 8-13 Hz et bêta 13-30 Hz) pour trois conditions : mouvement réel du poing (MM),
+imagination du même mouvement (MI) et pauses entre essais (REST). On se demande si MM et MI reposent sur le
+même réseau.
 
-- **`source`** : les 68 régions corticales de l'atlas Desikan-Killiany (signaux reconstruits en espace
-  source sur le template fsaverage) — exige un EEG dense (≥ 32 électrodes) en référence commune ;
-- **`sensor`** : les électrodes (repli pour les EEG peu denses ou bipolaires).
+## Résultats en bref
 
-Le use case (question posée aux graphes) n'est pas encore fixé ; EEGMMIDB yeux ouverts / yeux fermés
-sert ici de **jeu de test** pour valider la chaîne.
+1. **Validation physiologique** : la puissance alpha/bêta baisse sur le cortex sensorimoteur pendant MM et MI
+   (ERD, 105 sujets, p < 1e-15), plus fortement en MM (90 et 97 sujets sur 105, p < 1e-13).
+2. **Même architecture** : MM et MI ont les mêmes hubs (Jaccard des 7 hubs = 1.00 en alpha, 0.75 en bêta), le
+   même module sensorimoteur (Jaccard 0.75 et 0.94) et aucune métrique globale différente (p de Holm ≥ 0.078).
+3. **Ressemblance quasi maximale mais pas totale** : les arêtes MM–MI atteignent 94-96 % du plafond
+   intra-condition (moitiés aléatoires) et 95-97 % d'un plafond par run à distance temporelle appariée ;
+   IC 95 % bootstrap sous 1.
+4. **Effets de tâche partagés** : en bêta, la strength de la ROI sensorimotrice augmente autant en MM qu'en MI
+   par rapport au repos (r = 0.45 et 0.48, p de Holm ≤ 5e-5) ; rien de tel en alpha.
+5. **Conclusion** : un même réseau, faiblement mais reproductiblement modulé par la condition (94 % des
+   conclusions tiennent aux seuils 10 / 20 %). Détails, figures et limites : `reports/results_summary.md`.
 
 ## Données
 
-PhysioNet **EEG Motor Movement/Imagery Database** v1.0.0 (EEGMMIDB) : 109 sujets, 64 électrodes 10-10,
-160 Hz, EDF+, 14 runs par sujet (R01 repos yeux ouverts, R02 repos yeux fermés, R03-R14 tâches motrices).
-Licence Open Data Commons Attribution v1.0. Les données ne sont pas versionnées : elles sont téléchargées
-automatiquement depuis https://physionet.org/content/eegmmidb/1.0.0/ (via `mne.datasets.eegbci`) dans
-`data/`, avec le template `fsaverage` (`mne.datasets.fetch_fsaverage`, ~760 Mo).
+PhysioNet **EEG Motor Movement/Imagery Database** v1.0.0 (EEGMMIDB),
+https://physionet.org/content/eegmmidb/1.0.0/, doi:10.13026/C28G6P, licence **Open Data Commons Attribution
+v1.0** (Schalk et al. 2004 ; Goldberger et al. 2000). 109 sujets, 64 électrodes 10-10, 160 Hz, EDF+, 14 runs
+par sujet. **Les données ne sont pas versionnées** : elles se téléchargent automatiquement au premier
+lancement (`mne.datasets.eegbci`) dans `data/`, avec le template `fsaverage` (`mne.datasets.fetch_fsaverage`,
+~760 Mo).
 
-Contrôles par run (`loading.check_eegmmidb_run`), plutôt qu'une liste d'exclusion décrétée : fréquence
-d'échantillonnage, nombre de canaux, durée, durée des essais. Constats sur les en-têtes des 1 526 EDF :
-les runs de tâche de S088, S092 et S100 sont à 128 Hz avec un autre timing (exclus pour ces runs, leurs
-baselines sont normales) ; S104 R08 et S106 R05 sont tronqués (avertissement) ; les baselines de S089 sont
-mal annotées (sans effet : on découpe tout le run).
+Runs utilisés :
 
-## Pipeline
+| Usage | Runs | Sujets |
+|---|---|---|
+| Analyse MM / MI / REST | R03, R07, R11 (poing gauche / droit réel) ; R04, R08, R12 (imaginé) | 1 à 109, 105 inclus |
+| Validation de la chaîne (notebook 01) | R01 (repos yeux ouverts), R02 (repos yeux fermés) | 1 à 10 |
+| Validation ERD (notebook 02) | R03, R04, R07, R08, R11, R12 | 1 à 10 |
+
+Contrôles par run (`loading.check_eegmmidb_run` : fréquence, canaux, durée, durée des essais), puis règle
+d'inclusion (≥ 2 runs exploitables et ≥ 20 epochs tâche par condition, `reports/tables/cohort_mm_mi.csv`) :
+
+| Sujet | Décision | Raison |
+|---|---|---|
+| S088, S092, S100 | exclus | runs de tâche à 128 Hz, essais de 5.125 s au lieu de 4.1 s (autre protocole) |
+| S091 | exclu | 15 epochs tâche en MM après rejet crête-à-crête (< 20) |
+| S079 | inclus, sauf plafond par run | runs R04 et R07 avec 0 et 1 epoch tâche (règle : ≥ 8 epochs par run) |
+| S104 | inclus | R08 tronqué (106 s), avertissement |
+| S089 | inclus | R03 de 181 s avec 22 essais au lieu de 15 ; fenêtres vérifiées |
+
+## Reproduction
+
+Prérequis : [uv](https://docs.astral.sh/uv/), Python 3.12, ~6.5 Go de disque pour la chaîne complète, 16 Go de
+RAM pour 4 workers (~1.2 Go par worker). Temps mesurés sur un Mac 8 cœurs, 16 Go de RAM.
+
+| # | Commande | Ce que fait l'étape | Temps | Disque |
+|---|---|---|---|---|
+| 0 | `uv sync` | environnement `.venv` (dépendances figées par `uv.lock`) | 1 s avec le cache uv, sinon le téléchargement des paquets | ~0.5 Go (`.venv`) |
+| 1 | `uv run python scripts/build_cache.py --subjects 1-109 --runs 3,4,7,8,11,12 --n-jobs 4` | télécharge les EDF et fsaverage, contrôles, ICA, noyau eLORETA, connectivité par epoch → `data/cache/` ; logs dans `logs/` | 17.2 min (4 workers, téléchargements compris) | EDF 1.6 Go, fsaverage 0.76 Go, cache 3.5 Go |
+| 2 | `uv run python scripts/mm_mi_cohort.py` | inclusion des sujets, ERD sur la cohorte, matrices wPLI égalisées par sujet et condition, matrices par run → `data/derived/` | 33 s | 41 Mo |
+| 3 | `notebooks/01_eeg_to_graph.ipynb` | validation de la chaîne sur le repos yeux ouverts / fermés (effet Berger, V1-V6), graphe et métriques d'un sujet | 59 s (données présentes) ; au premier lancement, + téléchargement de R01/R02 et de fsaverage | ~60 Mo de cache |
+| 4 | `notebooks/02_task_erd_validation.ipynb` | découpage des runs de tâche et contrôle ERD sur les sujets 1-10 | 17 s si le cache existe ; sinon il calcule les 10 sujets (~100 s sur 4 workers + téléchargements) | inclus dans l'étape 1 |
+| 5 | `notebooks/03_mm_vs_mi.ipynb` | **analyse** : graphes de groupe, comparaison par sujet, robustesse, conclusion | 2-3 min (134 s mesurées ; 173 s sur un clone neuf) | < 5 Mo de sorties |
+
+Un notebook s'exécute sans interface avec :
+
+```bash
+uv run jupyter nbconvert --to notebook --execute --inplace notebooks/03_mm_vs_mi.ipynb
+```
+
+**Les étapes 1 et 2 sont facultatives pour reproduire l'analyse** : les matrices dérivées
+(`data/derived/matrices_mm_mi.npz` 25 Mo, `data/derived/run_matrices_mm_mi.npz` 16 Mo, et leurs CSV de
+métadonnées) sont versionnées. Sur un clone neuf, `uv sync` puis le notebook 03 suffisent (vérifié : résultats
+identiques) ; seul fsaverage (~760 Mo) est téléchargé, pour les vues cérébrales. Les notebooks 01 et 02
+téléchargent et calculent eux-mêmes ce dont ils ont besoin.
+
+Les sorties des notebooks sont retirées à chaque commit par le filtre git `nbstripout` (déclaré dans
+`.gitattributes`) ; l'installer une fois par clone avec `uv run nbstripout --install`.
+
+Contrôle qualité :
+
+```bash
+uv run pytest                                      # tests unitaires + équivalence du noyau (V5)
+uv run ruff check . && uv run ruff format --check . && uv run mypy src tests
+```
+
+## Organisation du dépôt
+
+| Chemin | Contenu |
+|---|---|
+| `src/eeg_graph/` | package : chargement, prétraitement, espace source, connectivité, cache, graphe, métriques, validation, `task_analysis` (analyse MM / MI) |
+| `scripts/` | `build_cache.py` (cache de la cohorte), `mm_mi_cohort.py` (inclusion, ERD, matrices dérivées) |
+| `notebooks/` | 01 validation repos, 02 validation ERD, 03 analyse MM vs MI |
+| `tests/` | tests unitaires (pytest) |
+| `data/derived/` | matrices dérivées versionnées (le reste de `data/` est ignoré) |
+| `reports/` | `results_summary.md` (résultats pour le rapport), `note_pipeline.md`, JSON de validation et de résultats, `figures/`, `tables/` |
+
+## Pipeline (détail technique)
 
 | Étape | Module | Choix |
 |---|---|---|
@@ -45,76 +115,19 @@ l'ensemble se réduit à une matrice `W` (68 × 64) : `séries des régions = W 
 l'inverse à une matrice identité, comme le fait MNE dans `make_inverse_resolution_matrix`. L'équivalence
 avec `apply_inverse_epochs` + `extract_label_time_course` est testée (`tests/test_source_kernel.py`).
 
-## Utilisation
+## Validation de la chaîne
 
-**Toute l'exécution passe par le notebook [`notebooks/01_eeg_to_graph.ipynb`](notebooks/01_eeg_to_graph.ipynb)**
-(environ 1 min une fois les données téléchargées). Le code est dans le package `eeg_graph` ; le notebook
-enchaîne les étapes : chargement et contrôles, prétraitement et ICA, noyau inverse (V5), connectivité et
-cache, graphe et métriques exigées, batch multi-sujets, validation (V1, V2, V4, V6), mode capteurs.
+**Repos (notebook 01, R01/R02, 10 sujets)** : effet Berger retrouvé en source (puissance alpha EC/EO maximale
+en occipital), bloc wPLI alpha pariéto-occipital plus fort yeux fermés (9/10 sujets, Wilcoxon p = 0.0098),
+matrices valides, ~7 s par enregistrement. Voir `reports/note_pipeline.md`, `reports/validation_source.json`.
 
-```bash
-uv sync                                    # crée .venv avec les dépendances (dont ipykernel)
-# ouvrir notebooks/01_eeg_to_graph.ipynb avec le noyau .venv, puis « Run All »
-# ou sans interface :
-uv run jupyter nbconvert --to notebook --execute --inplace notebooks/01_eeg_to_graph.ipynb
-```
-
-Les paramètres (sujet, runs, mode de nœuds, métrique, bande, seuils, sujets du batch) sont dans la
-deuxième cellule de code.
-
-Runs de tâche : [`notebooks/02_task_erd_validation.ipynb`](notebooks/02_task_erd_validation.ipynb) construit
-le cache des runs R03/R04/R07/R08/R11/R12 (sujets 1 à 10, ~30 s par sujet sur 4 workers) et vérifie l'ERD
-sensorimotrice ; il écrit `reports/validation_task.json` et `reports/figures/validation_task_erd_*.png`. Les sorties du notebook sont retirées automatiquement à chaque commit
-(filtre git `nbstripout`, déclaré dans `.gitattributes`).
-
-Contrôle qualité du code :
-
-```bash
-uv run pytest                                      # tests unitaires + équivalence du noyau (V5)
-uv run ruff check . && uv run ruff format . && uv run mypy src tests
-```
-
-Cohorte des runs de tâche (en ligne de commande, calcul long) :
-
-```bash
-uv run python scripts/build_cache.py --subjects 1-109 --runs 3,4,7,8,11,12 --n-jobs 4   # logs dans logs/
-uv run python scripts/mm_mi_cohort.py   # inclusion, ERD sur la cohorte, matrices égalisées
-```
-
-Analyse principale : [`notebooks/03_mm_vs_mi.ipynb`](notebooks/03_mm_vs_mi.ipynb) (~2 min sur 4 workers) répond à la
-question « bouger ou imaginer bouger : est-ce le même réseau cérébral ? » à partir de `data/derived/matrices_mm_mi.npz`.
-
-Sorties : `data/cache/eegmmidb/` (matrices, `index.csv`), `data/derived/matrices_mm_mi.npz` (+ `.csv`),
-`reports/figures/`, `reports/tables/` (dont `cohort_mm_mi.csv`), `reports/validation_source.json`,
-`reports/validation_task.json`, `reports/validation_task_cohort.json`, `reports/cohort_mm_mi.json`,
-`reports/mm_vs_mi_results.json` et `reports/{figures,tables}/mm_mi_*` (notebook 03), `logs/`.
-
-## Validation (EEGMMIDB R01/R02)
-
-Voir `reports/note_pipeline.md`. Résumé : effet Berger retrouvé en source (puissance alpha EC/EO maximale
-en occipital, 10 sujets), bloc wPLI alpha pariéto-occipital plus fort yeux fermés (9/10 sujets, Wilcoxon
-p = 0.0098), matrices valides, ~7 s par enregistrement.
-
-## Validation (EEGMMIDB runs de tâche, contrôle ERD)
-
-10 sujets, runs R03/R07/R11 (mouvement réel, MM) et R04/R08/R12 (mouvement imaginé, MI). ERD par région =
-log10 P (epochs gauche + droite) − log10 P (epochs T0), ROI = precentral, postcentral, paracentral des deux
-côtés. Détails et chiffres : `reports/validation_task.json`. En alpha et en bêta, MM et MI : la ROI est
-surreprésentée dans les 10 régions les plus négatives (5, 6, 3 et 4 régions sur 6 ; p hypergéométrique ≤ 0.037),
-l'ERD de la ROI est négative (Wilcoxon unilatéral p ≤ 0.0049) et plus forte en MM qu'en MI (p ≤ 0.002).
-Sur la cohorte (105 sujets inclus sur 109, `scripts/mm_mi_cohort.py`) : 6, 6, 5 et 6 régions ROI sur 6 dans le
-top 10 ; ERD de la ROI négative chez 91 à 104 sujets (p < 1e-15) ; plus forte en MM chez 90 (alpha) et 97 (bêta)
-sujets (p < 1e-13). Détails : `reports/validation_task_cohort.json`, `reports/cohort_mm_mi.json`.
-
-## Résultat : MM vs MI (notebook 03)
-
-wPLI, seuil proportionnel 15 % (robustesse 10 / 20 %), alpha et bêta, 105 sujets, nombre d'epochs égalisé par sujet.
-Mêmes hubs et même module sensorimoteur en MM et en MI, aucune métrique globale différente entre MM et MI
-(p de Holm ≥ 0.078). Ressemblance des arêtes MM–MI rapportée à un plafond intra-condition à taille égale :
-94 % (alpha) et 96 % (bêta) avec des moitiés aléatoires ; avec un plafond par run à distance temporelle
-appariée, 95 % et 97 % (IC 95 % bootstrap sous 1). Sans appariement, les paires MM–MI plus proches dans le
-temps atteignent 96 % et 99.5 % (IC en bêta contenant 1). Écart faible, du même ordre que tâche vs repos.
-Chiffres : `reports/mm_vs_mi_results.json` ; conclusion et réserves dans le notebook.
+**ERD (notebook 02 et `scripts/mm_mi_cohort.py`)** : ERD par région = log10 P (epochs gauche + droite) −
+log10 P (epochs T0), ROI = precentral, postcentral, paracentral des deux côtés. Sur 10 sujets : la ROI est
+surreprésentée dans les 10 régions les plus négatives (5, 6, 3 et 4 régions sur 6 en MM alpha, MM bêta,
+MI alpha, MI bêta ; p hypergéométrique ≤ 0.037), son ERD est négative (Wilcoxon unilatéral p ≤ 0.0049) et
+plus forte en MM qu'en MI (p ≤ 0.002). Sur la cohorte (105 sujets) : 6, 6, 5 et 6 régions sur 6 dans le
+top 10 ; ERD de la ROI négative chez 91 à 104 sujets (p < 1e-15) ; plus forte en MM chez 90 (alpha) et 97
+(bêta) sujets (p < 1e-13). Détails : `reports/validation_task.json`, `reports/validation_task_cohort.json`.
 
 ## Réutilisation de code
 
@@ -130,9 +143,16 @@ Chiffres : `reports/mm_vs_mi_results.json` ; conclusion et réserves dans le not
   Pfurtscheller G., Lopes da Silva F. H. (1999). Méthode reprise de l'article, pas de code.
 - Statistiques du notebook 03 (`task_analysis.holm`, `task_analysis.rank_biserial`) : correction de Holm (1979)
   et corrélation rang-bisériale appariée (Kerby 2014), réimplémentées d'après les articles, pas de code repris.
+- IC par bootstrap percentile sur les sujets (`task_analysis.bootstrap_median_ci`) : méthode classique
+  (Efron & Tibshirani 1993), réimplémentée, pas de code repris.
+- Formules des métriques citées dans `metrics.py` : clustering pondéré d'Onnela et al. (2005, implémentation
+  NetworkX), efficacité globale pondérée (Latora & Marchiori 2001 ; Rubinov & Sporns 2010, implémentation
+  maison), mesures de l'arbre couvrant (Stam et al. 2014).
+- Plan d'analyse MM / MI (égalisation des epochs, plafonds split-half et par run, distance appariée) : défini
+  par le groupe, sans source de code externe.
 - Aucun code existant spécifique à EEGMMIDB n'a été repris.
 - Bibliothèques : MNE-Python, mne-connectivity, python-picard, NumPy, SciPy, pandas, NetworkX,
-  scikit-learn, matplotlib.
+  scikit-learn, matplotlib, plotly, joblib ; outils : uv, pytest, ruff, mypy, nbconvert, nbstripout.
 
 ## Déclaration d'usage de l'IA
 
@@ -154,8 +174,12 @@ relus et validés par le groupe. *À compléter par le groupe avant le rendu.*
 - Nolan H., Whelan R., Reilly R. B. (2010). FASTER. J Neurosci Methods 192(1):152-162.
 - Mahjoory K. et al. (2017). Consistency of EEG source localization and connectivity estimates. NeuroImage 152:590-601.
 - Fraschini M., La Cava S. M., Didaci L., Barberini L. (2021). On the variability of functional connectivity and network measures in source-reconstructed EEG time-series. Entropy 23(1):5. arXiv:2007.05395.
+- Efron B., Tibshirani R. J. (1993). An Introduction to the Bootstrap. Chapman & Hall.
 - Holm S. (1979). A simple sequentially rejective multiple test procedure. Scand J Stat 6(2):65-70.
 - Kerby D. S. (2014). The simple difference formula: an approach to teaching nonparametric correlation. Compr Psychol 3:11.IT.3.1.
+- Latora V., Marchiori M. (2001). Efficient behavior of small-world networks. Phys Rev Lett 87(19):198701.
+- Onnela J.-P., Saramäki J., Kertész J., Kaski K. (2005). Intensity and coherence of motifs in weighted complex networks. Phys Rev E 71:065103.
 - Pfurtscheller G., Lopes da Silva F. H. (1999). Event-related EEG/MEG synchronization and desynchronization: basic principles. Clin Neurophysiol 110(11):1842-1857.
 - Rubinov M., Sporns O. (2010). Complex network measures of brain connectivity. NeuroImage 52(3):1059-1069.
+- Stam C. J. et al. (2014). The trees and the forest: characterization of complex brain networks with minimum spanning trees. Int J Psychophysiol 92(3):129-138.
 - Blondel V. D. et al. (2008). Louvain. J Stat Mech P10008.
