@@ -10,9 +10,17 @@ wheels/
 .venv
 
 # données (téléchargées / recalculables) — voir README
-data/
+data/*
+# exception : matrices dérivées (< 50 Mo chacune) pour lancer le notebook 03 sans recalculer le cache
+!data/derived/
+data/derived/*
+!data/derived/*.npz
+!data/derived/*.csv
 .mne_home/
 .ipynb_checkpoints/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# logs des scripts
+logs/

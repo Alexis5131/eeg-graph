@@ -5,19 +5,35 @@ V2 : validité de tous les fichiers du cache.
 V4 : temps de calcul par enregistrement.
 V5 : équivalence du noyau W avec apply_inverse_epochs + extract_label_time_course.
 V6 : sensibilité au choix de l'inverse (méthode × λ²).
+
+Runs de tâche poing gauche / droit (R03/R07/R11 réel, R04/R08/R12 imaginé) :
+ERD : désynchronisation alpha/bêta du cortex sensorimoteur pendant le mouvement réel et imaginé
+(Pfurtscheller G., Lopes da Silva F. H. (1999), Clin Neurophysiol 110(11):1842-1857).
 """
 
 from __future__ import annotations
+
+from collections.abc import Sequence
 
 import mne
 import numpy as np
 import pandas as pd
 from mne.minimum_norm import apply_inverse_epochs
 from numpy.typing import NDArray
-from scipy.stats import spearmanr, wilcoxon
+from scipy.stats import hypergeom, spearmanr, wilcoxon
 
 from eeg_graph.cache import RecordingResult, load_result, result_path, validate_connectivity
-from eeg_graph.config import REST_4S, Band, EpochSpec, InverseConfig, NodeSpace, Paths, PipelineConfig, band_index
+from eeg_graph.config import (
+    REST_4S,
+    TASK_LR,
+    Band,
+    EpochSpec,
+    InverseConfig,
+    NodeSpace,
+    Paths,
+    PipelineConfig,
+    band_index,
+)
 from eeg_graph.connectivity import recording_connectivity
 from eeg_graph.nodes import Atlas
 from eeg_graph.pipeline import DATASET, PreparedSubject
@@ -25,6 +41,13 @@ from eeg_graph.preprocessing import epoch_onsets, epoch_ptp, ptp_keep_mask
 from eeg_graph.source import compute_label_kernel, load_dk_labels, make_inverse, make_label_kernel, make_or_load_forward
 
 POSTERIOR: tuple[str, ...] = ("parietal", "occipital")
+# Cortex sensorimoteur (régions Desikan-Killiany), des deux côtés : gauche et droite sont regroupées.
+MOTOR_ROI: tuple[str, ...] = tuple(
+    f"{region}-{hemi}" for region in ("precentral", "postcentral", "paracentral") for hemi in ("lh", "rh")
+)
+TASK_CONDITIONS: tuple[str, ...] = ("mm_lr", "mi_lr")
+TASK_LABELS: tuple[str, ...] = ("left", "right")
+REST_LABEL = "rest"
 
 type Pair = tuple[RecordingResult, RecordingResult]
 
@@ -151,3 +174,167 @@ def inverse_robustness(
         [[float(spearmanr(vectors[a], vectors[b]).statistic) for b in names] for a in names], index=names, columns=names
     )
     return corr, pd.DataFrame({"variant": names, "posterior_block_wpli": [blocks[n] for n in names]})
+
+
+# --- Runs de tâche : désynchronisation liée à l'événement (ERD) -------------------------------------------
+
+
+def load_task_results(
+    paths: Paths, subjects: Sequence[int], node_space: NodeSpace, runs: Sequence[int] = (3, 4, 7, 8, 11, 12)
+) -> dict[int, dict[str, list[RecordingResult]]]:
+    """Runs de tâche (découpage TASK_LR) présents dans le cache, groupés par sujet puis condition."""
+    out: dict[int, dict[str, list[RecordingResult]]] = {}
+    for s in subjects:
+        for run in runs:
+            path = result_path(paths.cache, DATASET, node_space, s, run, TASK_LR.name)
+            if path.exists():
+                r = load_result(path)
+                out.setdefault(s, {}).setdefault(r.condition, []).append(r)
+    return out
+
+
+def epoch_label_counts(task_results: dict[int, dict[str, list[RecordingResult]]]) -> pd.DataFrame:
+    """Epochs retenues par sujet, run et label (après rejet crête-à-crête)."""
+    rows = [
+        {"subject": s, "run": r.run, "condition": r.condition, "n_epochs_total": r.n_epochs_total}
+        | {label: int((r.epoch_labels == label).sum()) for label in (REST_LABEL, *TASK_LABELS)}
+        for s, by_cond in task_results.items()
+        for results in by_cond.values()
+        for r in results
+    ]
+    return pd.DataFrame(rows).sort_values(["subject", "run"], ignore_index=True)
+
+
+def erd(results: Sequence[RecordingResult], band: str) -> NDArray[np.float64]:
+    """ERD par région : moyenne des log10 P des epochs tâche (left + right) - moyenne des epochs rest.
+
+    Les epochs des runs d'une même condition sont regroupées (même ICA et même noyau inverse pour un sujet).
+    Valeur négative = désynchronisation ; 10**ERD - 1 donne la variation relative de puissance.
+    Définition d'après Pfurtscheller & Lopes da Silva (1999), en log du rapport plutôt qu'en pourcentage.
+    """
+    b = results[0].bands.index(band)
+    power = np.concatenate([r.power_epochs[:, b] for r in results]).astype(np.float64)
+    labels = np.concatenate([r.epoch_labels for r in results])
+    task = np.isin(labels, TASK_LABELS)
+    rest = labels == REST_LABEL
+    if not task.any() or not rest.any():
+        raise ValueError(f"ERD {band} : il faut des epochs tâche et rest ({task.sum()} / {rest.sum()})")
+    return power[task].mean(axis=0) - power[rest].mean(axis=0)
+
+
+def erd_by_subject(
+    task_results: dict[int, dict[str, list[RecordingResult]]],
+    bands: Sequence[str] = ("alpha", "beta"),
+    conditions: Sequence[str] = TASK_CONDITIONS,
+) -> dict[tuple[str, str], NDArray[np.float64]]:
+    """(condition, bande) -> ERD (n_sujets, n_régions), sujets ayant la condition, dans l'ordre croissant."""
+    subjects = sorted(s for s, by_cond in task_results.items() if all(c in by_cond for c in conditions))
+    return {
+        (cond, band): np.stack([erd(task_results[s][cond], band) for s in subjects])
+        for cond in conditions
+        for band in bands
+    }
+
+
+def roi_top_check(
+    values: NDArray[np.floating], atlas: Atlas, roi: Sequence[str] = MOTOR_ROI, top: int = 10
+) -> dict[str, object]:
+    """(a) Les régions de la ROI sont-elles parmi les `top` valeurs les plus négatives ?
+
+    Rang 1 = région la plus négative. `passed` si la ROI y est surreprésentée par rapport au hasard
+    (loi hypergéométrique : `top` régions tirées parmi n, dont len(roi) dans la ROI ; p < 0.05).
+    """
+    names = list(atlas.names)
+    order = np.argsort(values)
+    rank = {names[i]: k + 1 for k, i in enumerate(order)}
+    in_top = [r for r in roi if rank[r] <= top]
+    p = float(hypergeom.sf(len(in_top) - 1, len(names), len(roi), top))
+    return {
+        "top_regions": [names[i] for i in order[:top]],
+        "roi_ranks": {r: rank[r] for r in roi},
+        "n_roi_in_top": len(in_top),
+        "n_roi": len(roi),
+        "expected_by_chance": len(roi) * top / len(names),
+        "hypergeom_p": p,
+        "passed": p < 0.05,
+    }
+
+
+def roi_mean(values: NDArray[np.floating], atlas: Atlas, roi: Sequence[str] = MOTOR_ROI) -> NDArray[np.float64]:
+    """Moyenne sur les régions de la ROI (dernier axe = régions)."""
+    idx = [atlas.names.index(r) for r in roi]
+    return np.asarray(values, dtype=np.float64)[..., idx].mean(axis=-1)
+
+
+def roi_erd_negative_test(roi_erd: NDArray[np.floating]) -> dict[str, object]:
+    """(b) Wilcoxon sur les sujets, unilatéral : ERD de la ROI < 0."""
+    x = np.asarray(roi_erd, dtype=np.float64)
+    p = float(wilcoxon(x, alternative="less").pvalue)
+    return {
+        "n_subjects": len(x),
+        "mean_erd_log10": float(x.mean()),
+        "median_erd_log10": float(np.median(x)),
+        "mean_power_change_pct": float((10 ** x.mean() - 1) * 100),
+        "n_subjects_negative": int((x < 0).sum()),
+        "wilcoxon_p_less": p,
+        "passed": p < 0.05,
+    }
+
+
+def mm_vs_mi_test(roi_mm: NDArray[np.floating], roi_mi: NDArray[np.floating]) -> dict[str, object]:
+    """(c) ERD plus forte (plus négative) en mouvement réel qu'imaginé : Wilcoxon apparié sur les sujets."""
+    mm, mi = np.asarray(roi_mm, dtype=np.float64), np.asarray(roi_mi, dtype=np.float64)
+    return {
+        "n_subjects": len(mm),
+        "mean_erd_mm": float(mm.mean()),
+        "mean_erd_mi": float(mi.mean()),
+        "n_subjects_mm_stronger": int((mm < mi).sum()),
+        "wilcoxon_p_less": float(wilcoxon(mm, mi, alternative="less").pvalue),
+        "wilcoxon_p_two_sided": float(wilcoxon(mm, mi).pvalue),
+    }
+
+
+def task_erd_report(
+    erds: dict[tuple[str, str], NDArray[np.float64]], atlas: Atlas, roi: Sequence[str] = MOTOR_ROI, top: int = 10
+) -> dict[str, object]:
+    """Contrôles (a), (b) par condition et bande, (c) par bande, sur les ERD par sujet."""
+    report: dict[str, object] = {"roi": list(roi)}
+    for (cond, band), values in erds.items():
+        report[f"{cond}_{band}"] = {
+            "a_roi_in_top": roi_top_check(values.mean(axis=0), atlas, roi, top),
+            "b_roi_erd_negative": roi_erd_negative_test(roi_mean(values, atlas, roi)),
+        }
+    for band in sorted({b for _, b in erds}, key=[b for _, b in erds].index):
+        if ("mm_lr", band) in erds and ("mi_lr", band) in erds:
+            report[f"c_mm_vs_mi_{band}"] = mm_vs_mi_test(
+                roi_mean(erds["mm_lr", band], atlas, roi), roi_mean(erds["mi_lr", band], atlas, roi)
+            )
+    return report
+
+
+def cohort_erd(
+    paths: Paths,
+    subjects: Sequence[int],
+    node_space: NodeSpace = "source",
+    bands: Sequence[str] = ("alpha", "beta"),
+    conditions: Sequence[str] = TASK_CONDITIONS,
+) -> tuple[dict[tuple[str, str], NDArray[np.float64]], Atlas, list[int]]:
+    """ERD par sujet sur une cohorte, sujet par sujet pour borner la mémoire.
+
+    Retour : (condition, bande) -> (n_sujets, n_régions), atlas, sujets retenus (ceux qui ont toutes les
+    conditions), dans l'ordre de `subjects`.
+    """
+    rows: dict[tuple[str, str], list[NDArray[np.float64]]] = {(c, b): [] for c in conditions for b in bands}
+    kept: list[int] = []
+    atlas: Atlas | None = None
+    for s in subjects:
+        one = load_task_results(paths, [s], node_space)
+        if s not in one or not all(c in one[s] for c in conditions):
+            continue
+        for key, values in erd_by_subject(one, bands, conditions).items():
+            rows[key].append(values[0])
+        atlas = atlas or one[s][conditions[0]][0].atlas()
+        kept.append(s)
+    if atlas is None:
+        raise ValueError("Aucun sujet avec toutes les conditions")
+    return {key: np.stack(v) for key, v in rows.items()}, atlas, kept

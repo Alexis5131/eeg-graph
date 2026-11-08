@@ -102,7 +102,11 @@ class PreparedSubject:
 
 
 class NoUsableRunError(RuntimeError):
-    """Aucun run du sujet ne passe les contrôles."""
+    """Aucun run du sujet ne passe les contrôles ; `checks` garde les raisons par run."""
+
+    def __init__(self, message: str, checks: dict[int, RunCheck]) -> None:
+        super().__init__(message)
+        self.checks = checks
 
 
 def prepare_eegmmidb_subject(
@@ -121,7 +125,7 @@ def prepare_eegmmidb_subject(
         else:
             logger.warning("S%03dR%02d exclu : %s", subject, run, "; ".join(checks[run].reasons))
     if not filtered:
-        raise NoUsableRunError(f"S{subject:03d} : aucun run exploitable parmi {list(runs)}")
+        raise NoUsableRunError(f"S{subject:03d} : aucun run exploitable parmi {list(runs)}", checks)
     ica = fit_ica(list(filtered.values()), cfg.preproc, cfg.seed)
     cleaned = {run: apply_ica(raw, ica) for run, raw in filtered.items()}
     return PreparedSubject(subject, checks, filtered, cleaned, ica, time.perf_counter() - t0)
@@ -134,6 +138,22 @@ def epoch_specs_for(run: int, extra_specs: Sequence[EpochSpec] = ()) -> list[Epo
     if run in dataset_spec.baseline_runs:
         specs.extend(extra_specs)
     return specs
+
+
+def record_exclusions(
+    subject: int,
+    checks: dict[int, RunCheck],
+    node_space: NodeSpace,
+    extra_specs: Sequence[EpochSpec] = (),
+    paths: Paths = Paths(),
+) -> None:
+    """Consigne dans index.csv les runs exclus par les contrôles, avec leurs raisons."""
+    index_path = paths.cache / DATASET / "index.csv"
+    for run, check in checks.items():
+        if not check.ok:
+            for spec in epoch_specs_for(run, extra_specs):
+                row = _index_row(subject, run, node_space, spec.name, "excluded", "; ".join(check.reasons))
+                update_index(index_path, row)
 
 
 def compute_subject_results(
@@ -150,11 +170,7 @@ def compute_subject_results(
     index_path = paths.cache / DATASET / "index.csv"
     subject = prepared.subject
     if save:
-        for run, check in prepared.checks.items():
-            if not check.ok:
-                for spec in epoch_specs_for(run, extra_specs):
-                    row = _index_row(subject, run, node_space, spec.name, "excluded", "; ".join(check.reasons))
-                    update_index(index_path, row)
+        record_exclusions(subject, prepared.checks, node_space, extra_specs, paths)
     shared_seconds = prepared.seconds / len(prepared.cleaned)
     results: list[RecordingResult] = []
     for run, raw in prepared.cleaned.items():
@@ -243,6 +259,7 @@ def process_eegmmidb_subject(
         prepared = prepare_eegmmidb_subject(subject, runs, cfg, paths)
     except NoUsableRunError as err:
         logger.warning("%s", err)
+        record_exclusions(subject, err.checks, node_space, extra_specs, paths)
         return []
     nodes = make_node_model(prepared.info, node_space, cfg, paths)
     return compute_subject_results(prepared, nodes, node_space, extra_specs, cfg, paths)
@@ -251,10 +268,25 @@ def process_eegmmidb_subject(
 def _batch_worker(
     subject: int, runs: Sequence[int], node_space: NodeSpace, extra_specs: Sequence[EpochSpec], overwrite: bool
 ) -> dict[str, object]:
+    """Un sujet ; une erreur inattendue est consignée et n'interrompt pas le batch."""
     setup_logging()
     t0 = time.perf_counter()
-    results = process_eegmmidb_subject(subject, runs, node_space, extra_specs, overwrite=overwrite)
-    return {"subject": subject, "n_recordings": len(results), "seconds": round(time.perf_counter() - t0, 1)}
+    try:
+        results = process_eegmmidb_subject(subject, runs, node_space, extra_specs, overwrite=overwrite)
+    except Exception as err:
+        logger.exception("S%03d : échec du traitement", subject)
+        return {
+            "subject": subject,
+            "n_recordings": 0,
+            "seconds": round(time.perf_counter() - t0, 1),
+            "error": repr(err),
+        }
+    return {
+        "subject": subject,
+        "n_recordings": len(results),
+        "seconds": round(time.perf_counter() - t0, 1),
+        "error": "",
+    }
 
 
 def build_cache(

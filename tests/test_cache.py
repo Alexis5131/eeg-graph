@@ -95,3 +95,19 @@ def test_update_index_replaces_same_key(tmp_path: Path) -> None:
     df = pd.read_csv(index)
     assert len(df) == 2
     assert df.loc[df.run == 1, "status"].item() == "ok"
+
+
+def _write_rows(index: Path, subject: int, n: int) -> None:
+    for run in range(n):
+        update_index(index, {"dataset": "d", "node_space": "s", "subject": subject, "run": run, "epoch_spec": "e"})
+
+
+def test_update_index_concurrent_writers(tmp_path: Path) -> None:
+    """Plusieurs processus écrivent le même index : aucune ligne perdue."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    index = tmp_path / "index.csv"
+    with ProcessPoolExecutor(4) as pool:
+        list(pool.map(_write_rows, [index] * 4, range(4), [15] * 4))
+    assert len(pd.read_csv(index)) == 60
+    assert not list(tmp_path.glob("*.lock")) and not list(tmp_path.glob("*.tmp"))

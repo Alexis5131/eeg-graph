@@ -1,0 +1,357 @@
+{
+  "subjects": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "runs": [
+    3,
+    4,
+    7,
+    8,
+    11,
+    12
+  ],
+  "epoch_spec": {
+    "name": "task_lr",
+    "tmin": 0.5,
+    "tmax": 4.0,
+    "events": {
+      "T0": "rest",
+      "T1": "left",
+      "T2": "right"
+    }
+  },
+  "epochs_by_run": [
+    {
+      "run": 3,
+      "rest": 145,
+      "rest_total": 150,
+      "left": 69,
+      "left_total": 75,
+      "right": 75,
+      "right_total": 75,
+      "kept_pct": 96.3
+    },
+    {
+      "run": 4,
+      "rest": 145,
+      "rest_total": 150,
+      "left": 76,
+      "left_total": 77,
+      "right": 71,
+      "right_total": 73,
+      "kept_pct": 97.3
+    },
+    {
+      "run": 7,
+      "rest": 139,
+      "rest_total": 150,
+      "left": 73,
+      "left_total": 76,
+      "right": 70,
+      "right_total": 74,
+      "kept_pct": 94.0
+    },
+    {
+      "run": 8,
+      "rest": 146,
+      "rest_total": 150,
+      "left": 75,
+      "left_total": 76,
+      "right": 70,
+      "right_total": 74,
+      "kept_pct": 97.0
+    },
+    {
+      "run": 11,
+      "rest": 146,
+      "rest_total": 150,
+      "left": 71,
+      "left_total": 76,
+      "right": 72,
+      "right_total": 74,
+      "kept_pct": 96.3
+    },
+    {
+      "run": 12,
+      "rest": 135,
+      "rest_total": 150,
+      "left": 76,
+      "left_total": 77,
+      "right": 70,
+      "right_total": 73,
+      "kept_pct": 93.7
+    }
+  ],
+  "seconds_per_subject": {
+    "median": 31.349999999999998,
+    "min": 27.35,
+    "max": 33.93
+  },
+  "cache": {
+    "n_files": 60,
+    "median_file_mb": 6.034457,
+    "max_file_mb": 6.237775,
+    "total_mb": 358.819646,
+    "extrapolated_50x6_gb": 1.8103371,
+    "format": "np.savez_compressed"
+  },
+  "erd": {
+    "roi": [
+      "precentral-lh",
+      "precentral-rh",
+      "postcentral-lh",
+      "postcentral-rh",
+      "paracentral-lh",
+      "paracentral-rh"
+    ],
+    "mm_lr_alpha": {
+      "a_roi_in_top": {
+        "top_regions": [
+          "paracentral-rh",
+          "superiorparietal-lh",
+          "paracentral-lh",
+          "precuneus-lh",
+          "postcentral-lh",
+          "precentral-lh",
+          "precuneus-rh",
+          "isthmuscingulate-lh",
+          "pericalcarine-lh",
+          "postcentral-rh"
+        ],
+        "roi_ranks": {
+          "precentral-lh": 6,
+          "precentral-rh": 11,
+          "postcentral-lh": 5,
+          "postcentral-rh": 10,
+          "paracentral-lh": 3,
+          "paracentral-rh": 1
+        },
+        "n_roi_in_top": 5,
+        "n_roi": 6,
+        "expected_by_chance": 0.8823529411764706,
+        "hypergeom_p": 0.00013545497522670483,
+        "passed": true
+      },
+      "b_roi_erd_negative": {
+        "n_subjects": 10,
+        "mean_erd_log10": -0.12857911212072803,
+        "median_erd_log10": -0.11692725099549121,
+        "mean_power_change_pct": -25.626043081034776,
+        "n_subjects_negative": 9,
+        "wilcoxon_p_less": 0.001953125,
+        "passed": true
+      }
+    },
+    "mm_lr_beta": {
+      "a_roi_in_top": {
+        "top_regions": [
+          "paracentral-rh",
+          "superiorparietal-lh",
+          "paracentral-lh",
+          "precuneus-lh",
+          "postcentral-lh",
+          "precuneus-rh",
+          "precentral-lh",
+          "precentral-rh",
+          "postcentral-rh",
+          "superiorparietal-rh"
+        ],
+        "roi_ranks": {
+          "precentral-lh": 7,
+          "precentral-rh": 8,
+          "postcentral-lh": 5,
+          "postcentral-rh": 9,
+          "paracentral-lh": 3,
+          "paracentral-rh": 1
+        },
+        "n_roi_in_top": 6,
+        "n_roi": 6,
+        "expected_by_chance": 0.8823529411764706,
+        "hypergeom_p": 1.918625711426414e-06,
+        "passed": true
+      },
+      "b_roi_erd_negative": {
+        "n_subjects": 10,
+        "mean_erd_log10": -0.13760576878833303,
+        "median_erd_log10": -0.12167014170249324,
+        "mean_power_change_pct": -27.155925274217797,
+        "n_subjects_negative": 10,
+        "wilcoxon_p_less": 0.0009765625,
+        "passed": true
+      }
+    },
+    "mi_lr_alpha": {
+      "a_roi_in_top": {
+        "top_regions": [
+          "postcentral-lh",
+          "bankssts-lh",
+          "parahippocampal-lh",
+          "supramarginal-lh",
+          "precentral-lh",
+          "precuneus-lh",
+          "lingual-lh",
+          "paracentral-lh",
+          "superiorparietal-lh",
+          "lateraloccipital-lh"
+        ],
+        "roi_ranks": {
+          "precentral-lh": 5,
+          "precentral-rh": 37,
+          "postcentral-lh": 1,
+          "postcentral-rh": 33,
+          "paracentral-lh": 8,
+          "paracentral-rh": 14
+        },
+        "n_roi_in_top": 3,
+        "n_roi": 6,
+        "expected_by_chance": 0.8823529411764706,
+        "hypergeom_p": 0.037136151820085096,
+        "passed": true
+      },
+      "b_roi_erd_negative": {
+        "n_subjects": 10,
+        "mean_erd_log10": -0.0633610924940062,
+        "median_erd_log10": -0.05693428233296831,
+        "mean_power_change_pct": -13.575095661369375,
+        "n_subjects_negative": 9,
+        "wilcoxon_p_less": 0.0029296875,
+        "passed": true
+      }
+    },
+    "mi_lr_beta": {
+      "a_roi_in_top": {
+        "top_regions": [
+          "postcentral-lh",
+          "precentral-lh",
+          "superiorparietal-lh",
+          "paracentral-lh",
+          "isthmuscingulate-lh",
+          "inferiorparietal-rh",
+          "posteriorcingulate-lh",
+          "precuneus-lh",
+          "postcentral-rh",
+          "lateraloccipital-rh"
+        ],
+        "roi_ranks": {
+          "precentral-lh": 2,
+          "precentral-rh": 21,
+          "postcentral-lh": 1,
+          "postcentral-rh": 9,
+          "paracentral-lh": 4,
+          "paracentral-rh": 12
+        },
+        "n_roi_in_top": 4,
+        "n_roi": 6,
+        "expected_by_chance": 0.8823529411764706,
+        "hypergeom_p": 0.0033069432762145665,
+        "passed": true
+      },
+      "b_roi_erd_negative": {
+        "n_subjects": 10,
+        "mean_erd_log10": -0.06061129928078533,
+        "median_erd_log10": -0.054968413600214795,
+        "mean_power_change_pct": -13.026148866135213,
+        "n_subjects_negative": 8,
+        "wilcoxon_p_less": 0.0048828125,
+        "passed": true
+      }
+    },
+    "c_mm_vs_mi_alpha": {
+      "n_subjects": 10,
+      "mean_erd_mm": -0.12857911212072803,
+      "mean_erd_mi": -0.0633610924940062,
+      "n_subjects_mm_stronger": 10,
+      "wilcoxon_p_less": 0.0009765625,
+      "wilcoxon_p_two_sided": 0.001953125
+    },
+    "c_mm_vs_mi_beta": {
+      "n_subjects": 10,
+      "mean_erd_mm": -0.13760576878833303,
+      "mean_erd_mi": -0.06061129928078533,
+      "n_subjects_mm_stronger": 9,
+      "wilcoxon_p_less": 0.001953125,
+      "wilcoxon_p_two_sided": 0.00390625
+    }
+  },
+  "roi_erd_by_subject": [
+    {
+      "subject": 1,
+      "mm_lr_alpha": -0.1276,
+      "mm_lr_beta": -0.1313,
+      "mi_lr_alpha": -0.12379,
+      "mi_lr_beta": -0.13589
+    },
+    {
+      "subject": 2,
+      "mm_lr_alpha": -0.29133,
+      "mm_lr_beta": -0.24458,
+      "mi_lr_alpha": -0.06734,
+      "mi_lr_beta": -0.08574
+    },
+    {
+      "subject": 3,
+      "mm_lr_alpha": 0.04057,
+      "mm_lr_beta": -0.02764,
+      "mi_lr_alpha": 0.04232,
+      "mi_lr_beta": 0.01125
+    },
+    {
+      "subject": 4,
+      "mm_lr_alpha": -0.19478,
+      "mm_lr_beta": -0.22822,
+      "mi_lr_alpha": -0.102,
+      "mi_lr_beta": -0.05578
+    },
+    {
+      "subject": 5,
+      "mm_lr_alpha": -0.11123,
+      "mm_lr_beta": -0.18675,
+      "mi_lr_alpha": -0.04484,
+      "mi_lr_beta": -0.06018
+    },
+    {
+      "subject": 6,
+      "mm_lr_alpha": -0.08722,
+      "mm_lr_beta": -0.07852,
+      "mi_lr_alpha": -0.06105,
+      "mi_lr_beta": -0.04867
+    },
+    {
+      "subject": 7,
+      "mm_lr_alpha": -0.19973,
+      "mm_lr_beta": -0.2283,
+      "mi_lr_alpha": -0.13757,
+      "mi_lr_beta": -0.14851
+    },
+    {
+      "subject": 8,
+      "mm_lr_alpha": -0.12088,
+      "mm_lr_beta": -0.07112,
+      "mi_lr_alpha": -0.04167,
+      "mi_lr_beta": -0.05416
+    },
+    {
+      "subject": 9,
+      "mm_lr_alpha": -0.08062,
+      "mm_lr_beta": -0.06758,
+      "mi_lr_alpha": -0.05282,
+      "mi_lr_beta": 0.01832
+    },
+    {
+      "subject": 10,
+      "mm_lr_alpha": -0.11298,
+      "mm_lr_beta": -0.11204,
+      "mi_lr_alpha": -0.04486,
+      "mi_lr_beta": -0.04676
+    }
+  ]
+}

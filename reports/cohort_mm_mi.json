@@ -1,0 +1,271 @@
+{
+  "n_subjects": 109,
+  "n_included": 105,
+  "inclusion_rule": {
+    "min_runs_per_condition": 2,
+    "min_task_epochs_per_condition": 20
+  },
+  "run_status_counts": {
+    "excluded": 18,
+    "ok": 636
+  },
+  "run_status_by_run": {
+    "3": {
+      "excluded": 3,
+      "ok": 106
+    },
+    "4": {
+      "excluded": 3,
+      "ok": 106
+    },
+    "7": {
+      "excluded": 3,
+      "ok": 106
+    },
+    "8": {
+      "excluded": 3,
+      "ok": 106
+    },
+    "11": {
+      "excluded": 3,
+      "ok": 106
+    },
+    "12": {
+      "excluded": 3,
+      "ok": 106
+    }
+  },
+  "runs_not_ok": [
+    {
+      "subject": 88,
+      "run": 3,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 88,
+      "run": 4,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 88,
+      "run": 7,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 88,
+      "run": 8,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 88,
+      "run": 11,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 88,
+      "run": 12,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 92,
+      "run": 3,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 92,
+      "run": 4,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 92,
+      "run": 7,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 92,
+      "run": 8,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 92,
+      "run": 11,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 92,
+      "run": 12,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 100,
+      "run": 3,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 100,
+      "run": 4,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 100,
+      "run": 7,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 100,
+      "run": 8,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 100,
+      "run": 11,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 100,
+      "run": 12,
+      "status": "excluded",
+      "reason": "sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    }
+  ],
+  "excluded_subjects": [
+    {
+      "subject": 88,
+      "exclusion_reason": "MM : 0 run(s) exploitable(s) < 2; MM : 0 epochs tâche < 20; MI : 0 run(s) exploitable(s) < 2; MI : 0 epochs tâche < 20",
+      "runs_not_ok": "R03 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R04 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R07 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R08 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R11 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R12 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 91,
+      "exclusion_reason": "MM : 15 epochs tâche < 20",
+      "runs_not_ok": ""
+    },
+    {
+      "subject": 92,
+      "exclusion_reason": "MM : 0 run(s) exploitable(s) < 2; MM : 0 epochs tâche < 20; MI : 0 run(s) exploitable(s) < 2; MI : 0 epochs tâche < 20",
+      "runs_not_ok": "R03 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R04 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R07 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R08 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R11 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R12 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    },
+    {
+      "subject": 100,
+      "exclusion_reason": "MM : 0 run(s) exploitable(s) < 2; MM : 0 epochs tâche < 20; MI : 0 run(s) exploitable(s) < 2; MI : 0 epochs tâche < 20",
+      "runs_not_ok": "R03 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R04 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R07 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R08 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R11 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole); R12 excluded: sfreq 128 Hz != 160 Hz; essais de 5.125 s au lieu de 4.1 s (autre protocole)"
+    }
+  ],
+  "epochs_by_condition_included": {
+    "MM_task_epochs": {
+      "count": 105.0,
+      "mean": 42.4,
+      "std": 2.8,
+      "min": 27.0,
+      "25%": 42.0,
+      "50%": 43.0,
+      "75%": 44.0,
+      "max": 51.0
+    },
+    "MI_task_epochs": {
+      "count": 105.0,
+      "mean": 42.5,
+      "std": 2.9,
+      "min": 21.0,
+      "25%": 42.0,
+      "50%": 43.0,
+      "75%": 44.0,
+      "max": 45.0
+    },
+    "REST_epochs": {
+      "count": 105.0,
+      "mean": 84.7,
+      "std": 5.0,
+      "min": 49.0,
+      "25%": 83.0,
+      "50%": 86.0,
+      "75%": 87.0,
+      "max": 92.0
+    }
+  },
+  "epochs_by_condition_all": {
+    "MM_task_epochs": {
+      "count": 109.0,
+      "mean": 41.0,
+      "std": 7.9,
+      "min": 0.0,
+      "25%": 41.0,
+      "50%": 43.0,
+      "75%": 44.0,
+      "max": 51.0
+    },
+    "MI_task_epochs": {
+      "count": 109.0,
+      "mean": 41.2,
+      "std": 7.7,
+      "min": 0.0,
+      "25%": 42.0,
+      "50%": 43.0,
+      "75%": 44.0,
+      "max": 45.0
+    },
+    "REST_epochs": {
+      "count": 109.0,
+      "mean": 81.7,
+      "std": 16.2,
+      "min": 0.0,
+      "25%": 83.0,
+      "50%": 85.0,
+      "75%": 87.0,
+      "max": 92.0
+    }
+  },
+  "n_equalized": {
+    "count": 105.0,
+    "mean": 41.6,
+    "std": 3.1,
+    "min": 21.0,
+    "25%": 41.0,
+    "50%": 42.0,
+    "75%": 43.0,
+    "max": 45.0
+  },
+  "n_half": {
+    "count": 105.0,
+    "mean": 20.5,
+    "std": 1.6,
+    "min": 10.0,
+    "25%": 20.0,
+    "50%": 21.0,
+    "75%": 21.0,
+    "max": 22.0
+  },
+  "run_matrices": {
+    "n_subjects": 104,
+    "dropped_subjects": [
+      79
+    ],
+    "n_per_run": {
+      "count": 104.0,
+      "mean": 12.9,
+      "std": 1.4,
+      "min": 8.0,
+      "25%": 12.0,
+      "50%": 13.0,
+      "75%": 14.0,
+      "max": 15.0
+    }
+  },
+  "seconds": 32.8
+}

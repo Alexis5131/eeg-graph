@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -156,15 +160,51 @@ def load_result(path: Path) -> RecordingResult:
 _INDEX_KEY = ["dataset", "node_space", "subject", "run", "epoch_spec"]
 
 
+@contextmanager
+def file_lock(path: Path, timeout: float = 120.0, poll: float = 0.05) -> Iterator[None]:
+    """Verrou exclusif inter-processus : création atomique de `path` (O_CREAT | O_EXCL), portable.
+
+    Les workers joblib de `build_cache` mettent à jour le même index.csv ; sans verrou, deux
+    lecture-modification-écriture simultanées perdent une ligne. Un verrou plus vieux que `timeout`
+    (processus tué) est considéré comme abandonné et retiré.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    start = time.monotonic()
+    while True:
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            try:
+                if time.time() - path.stat().st_mtime > timeout:
+                    path.unlink(missing_ok=True)
+                    continue
+            except FileNotFoundError:
+                continue
+            if time.monotonic() - start > timeout:
+                raise TimeoutError(f"Verrou {path} non obtenu en {timeout} s") from None
+            time.sleep(poll)
+    try:
+        yield
+    finally:
+        os.close(fd)
+        path.unlink(missing_ok=True)
+
+
 def update_index(index_path: Path, row: dict[str, object]) -> None:
-    """Ajoute ou remplace la ligne (dataset, node_space, subject, run, epoch_spec) de l'index."""
-    new = pd.DataFrame([row])
-    if index_path.exists():
-        old = pd.read_csv(index_path)
-        key = tuple(row[k] for k in _INDEX_KEY)
-        same = np.ones(len(old), dtype=bool)
-        for k, v in zip(_INDEX_KEY, key, strict=True):
-            same &= old[k].astype(str).to_numpy() == str(v)
-        new = pd.concat([old.loc[~same], new], ignore_index=True)
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    new.sort_values(_INDEX_KEY).to_csv(index_path, index=False)
+    """Ajoute ou remplace la ligne (dataset, node_space, subject, run, epoch_spec) de l'index.
+
+    Sûr en écriture concurrente (verrou + remplacement atomique du fichier).
+    """
+    with file_lock(index_path.with_suffix(".lock")):
+        new = pd.DataFrame([row])
+        if index_path.exists():
+            old = pd.read_csv(index_path)
+            key = tuple(row[k] for k in _INDEX_KEY)
+            same = np.ones(len(old), dtype=bool)
+            for k, v in zip(_INDEX_KEY, key, strict=True):
+                same &= old[k].astype(str).to_numpy() == str(v)
+            new = pd.concat([old.loc[~same], new], ignore_index=True)
+        tmp = index_path.with_suffix(f".{os.getpid()}.tmp")
+        new.sort_values(_INDEX_KEY).to_csv(tmp, index=False)
+        tmp.replace(index_path)
