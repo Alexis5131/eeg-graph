@@ -81,9 +81,13 @@ uv run python scripts/build_cache.py --subjects 1-109 --runs 3,4,7,8,11,12 --n-j
 uv run python scripts/mm_mi_cohort.py   # inclusion, ERD sur la cohorte, matrices égalisées
 ```
 
+Analyse principale : [`notebooks/03_mm_vs_mi.ipynb`](notebooks/03_mm_vs_mi.ipynb) (~2 min sur 4 workers) répond à la
+question « bouger ou imaginer bouger : est-ce le même réseau cérébral ? » à partir de `data/derived/matrices_mm_mi.npz`.
+
 Sorties : `data/cache/eegmmidb/` (matrices, `index.csv`), `data/derived/matrices_mm_mi.npz` (+ `.csv`),
 `reports/figures/`, `reports/tables/` (dont `cohort_mm_mi.csv`), `reports/validation_source.json`,
-`reports/validation_task.json`, `reports/validation_task_cohort.json`, `reports/cohort_mm_mi.json`, `logs/`.
+`reports/validation_task.json`, `reports/validation_task_cohort.json`, `reports/cohort_mm_mi.json`,
+`reports/mm_vs_mi_results.json` et `reports/{figures,tables}/mm_mi_*` (notebook 03), `logs/`.
 
 ## Validation (EEGMMIDB R01/R02)
 
@@ -102,6 +106,14 @@ Sur la cohorte (105 sujets inclus sur 109, `scripts/mm_mi_cohort.py`) : 6, 6, 5 
 top 10 ; ERD de la ROI négative chez 91 à 104 sujets (p < 1e-15) ; plus forte en MM chez 90 (alpha) et 97 (bêta)
 sujets (p < 1e-13). Détails : `reports/validation_task_cohort.json`, `reports/cohort_mm_mi.json`.
 
+## Résultat : MM vs MI (notebook 03)
+
+wPLI, seuil proportionnel 15 % (robustesse 10 / 20 %), alpha et bêta, 105 sujets, nombre d'epochs égalisé par sujet.
+Mêmes hubs et même module sensorimoteur en MM et en MI, aucune métrique globale différente entre MM et MI
+(p de Holm ≥ 0.078). Ressemblance des arêtes MM–MI = 94 % (alpha) et 96 % (bêta) du plafond intra-condition
+mesuré à taille égale (IC 95 % bootstrap sous 1), écart du même ordre que celui de chaque tâche avec le repos.
+Chiffres : `reports/mm_vs_mi_results.json` ; conclusion et réserves dans le notebook.
+
 ## Réutilisation de code
 
 - Projet personnel précédent **Sleep-Analysis** (https://github.com/Alexis5131/Sleep-Analysis) :
@@ -114,6 +126,8 @@ sujets (p < 1e-13). Détails : `reports/validation_task_cohort.json`, `reports/c
   - principe de la matrice de résolution : https://mne.tools/stable/generated/mne.minimum_norm.make_inverse_resolution_matrix.html
 - Définition de l'ERD (`validation.erd`, puissance pendant la tâche rapportée à une référence de repos) :
   Pfurtscheller G., Lopes da Silva F. H. (1999). Méthode reprise de l'article, pas de code.
+- Statistiques du notebook 03 (`task_analysis.holm`, `task_analysis.rank_biserial`) : correction de Holm (1979)
+  et corrélation rang-bisériale appariée (Kerby 2014), réimplémentées d'après les articles, pas de code repris.
 - Aucun code existant spécifique à EEGMMIDB n'a été repris.
 - Bibliothèques : MNE-Python, mne-connectivity, python-picard, NumPy, SciPy, pandas, NetworkX,
   scikit-learn, matplotlib.
@@ -138,6 +152,8 @@ relus et validés par le groupe. *À compléter par le groupe avant le rendu.*
 - Nolan H., Whelan R., Reilly R. B. (2010). FASTER. J Neurosci Methods 192(1):152-162.
 - Mahjoory K. et al. (2017). Consistency of EEG source localization and connectivity estimates. NeuroImage 152:590-601.
 - Fraschini M., La Cava S. M., Didaci L., Barberini L. (2021). On the variability of functional connectivity and network measures in source-reconstructed EEG time-series. Entropy 23(1):5. arXiv:2007.05395.
+- Holm S. (1979). A simple sequentially rejective multiple test procedure. Scand J Stat 6(2):65-70.
+- Kerby D. S. (2014). The simple difference formula: an approach to teaching nonparametric correlation. Compr Psychol 3:11.IT.3.1.
 - Pfurtscheller G., Lopes da Silva F. H. (1999). Event-related EEG/MEG synchronization and desynchronization: basic principles. Clin Neurophysiol 110(11):1842-1857.
 - Rubinov M., Sporns O. (2010). Complex network measures of brain connectivity. NeuroImage 52(3):1059-1069.
 - Blondel V. D. et al. (2008). Louvain. J Stat Mech P10008.

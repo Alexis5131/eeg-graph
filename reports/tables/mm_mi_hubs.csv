@@ -1,0 +1,7 @@
+band,condition,hubs
+alpha,MM,"paracentral-lh, posteriorcingulate-rh, bankssts-lh, superiortemporal-lh, pericalcarine-lh, pericalcarine-rh, posteriorcingulate-lh"
+alpha,MI,"paracentral-lh, bankssts-lh, posteriorcingulate-rh, superiortemporal-lh, pericalcarine-rh, pericalcarine-lh, posteriorcingulate-lh"
+alpha,REST,"paracentral-lh, bankssts-lh, posteriorcingulate-rh, superiortemporal-lh, pericalcarine-lh, pericalcarine-rh, supramarginal-lh"
+beta,MM,"paracentral-lh, posteriorcingulate-rh, bankssts-lh, supramarginal-lh, superiortemporal-lh, posteriorcingulate-lh, fusiform-rh"
+beta,MI,"paracentral-lh, bankssts-lh, supramarginal-lh, posteriorcingulate-rh, superiortemporal-lh, posteriorcingulate-lh, pericalcarine-rh"
+beta,REST,"paracentral-lh, bankssts-lh, posteriorcingulate-rh, supramarginal-lh, superiortemporal-lh, pericalcarine-rh, pericalcarine-lh"

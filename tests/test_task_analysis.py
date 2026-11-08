@@ -45,7 +45,7 @@ def _result(run: int, condition: str, labels: list[str], subject: int = 1, offse
         bands=("alpha", "beta"),
         metrics=("wpli", "ciplv"),
         conn_epochs=conn.astype(np.float32),
-        power_epochs=np.zeros((n_epochs, 2, N), dtype=np.float32),
+        power_epochs=np.broadcast_to(values[:, None, None], (n_epochs, 2, N)).astype(np.float32),
         epoch_onsets=np.arange(n_epochs, dtype=np.int64),
         epoch_labels=np.array(labels),
         n_epochs_total=n_epochs,
@@ -107,6 +107,10 @@ def test_subject_matrices_means_match_selection() -> None:
         np.testing.assert_allclose(out.halves[k, 0], ep.conn[cond][sel[cond].half_a].mean(axis=0), rtol=1e-6)
         np.testing.assert_allclose(out.halves[k, 1], ep.conn[cond][sel[cond].half_b].mean(axis=0), rtol=1e-6)
     assert np.all(out.matrices[:, :, np.arange(N), np.arange(N)] == 0)
+    assert out.power is not None and out.power.shape == (3, 2, N)
+    for k, cond in enumerate(CONDITIONS):
+        assert ep.power is not None
+        np.testing.assert_allclose(out.power[k], ep.power[cond][sel[cond].full].mean(axis=0), rtol=1e-6)
 
 
 def test_save_and_load_cohort_matrices(tmp_path: Path) -> None:
@@ -124,6 +128,7 @@ def test_save_and_load_cohort_matrices(tmp_path: Path) -> None:
     assert loaded.matrices.shape == (2, 3, 2, N, N) and loaded.halves.shape == (2, 3, 2, 2, N, N)
     np.testing.assert_array_equal(loaded.matrix(2, "MI", "beta"), items[1].matrices[1, 1])
     assert loaded.atlas.names == ep.atlas.names
+    assert loaded.power.shape == (2, 3, 2, N)
 
 
 def test_cohort_table_inclusion(tmp_path: Path) -> None:
@@ -156,3 +161,163 @@ def test_cohort_table_inclusion(tmp_path: Path) -> None:
     assert "R08 excluded: sfreq 128 Hz" in str(table.loc[2, "runs_not_ok"])
     assert table.loc[3, "exclusion_reason"] == "MM : 18 epochs tâche < 20; MI : 18 epochs tâche < 20"
     assert table.loc[4, "exclusion_reason"] == "absent de index.csv"
+
+
+# --- Analyse ----------------------------------------------------------------------------------------------
+
+from eeg_graph.nodes import Atlas  # noqa: E402
+from eeg_graph.task_analysis import (  # noqa: E402
+    bootstrap_median_ci,
+    describe_graph,
+    edge_spearman,
+    global_metric_tests,
+    graph_global_metrics,
+    holm,
+    jaccard,
+    power_strength_confound,
+    rank_biserial,
+    robustness_table,
+    sensorimotor_module,
+    split_half_similarity,
+    strength_spearman,
+    top_hubs,
+    top_regions,
+)
+from eeg_graph.validation import MOTOR_ROI  # noqa: E402
+
+_NAMES = (*MOTOR_ROI, "x1-lh", "x2-lh", "x3-rh", "x4-rh")
+_ATLAS = Atlas(
+    space="source",
+    names=_NAMES,
+    hemispheres=tuple(n.rsplit("-", 1)[1] for n in _NAMES),
+    lobes=("frontal",) * 2 + ("parietal",) * 2 + ("frontal",) * 2 + ("temporal",) * 2 + ("occipital",) * 2,
+    coords_mm=np.zeros((len(_NAMES), 3)),
+)
+
+
+def _sym(rng: np.random.Generator, n: int) -> np.ndarray:
+    a = np.triu(rng.random((n, n)), 1)
+    return a + a.T
+
+
+def test_holm_and_rank_biserial() -> None:
+    np.testing.assert_allclose(holm([0.01, 0.04, 0.03]), [0.03, 0.06, 0.06])
+    np.testing.assert_allclose(holm([0.5, 0.9]), [1.0, 1.0])
+    assert rank_biserial(np.array([3.0, 0.0, 6.0]), np.zeros(3)) == pytest.approx(1.0)
+    assert rank_biserial(np.array([1.0, -2.0, 3.0]), np.zeros(3)) == pytest.approx(1 / 3)
+    assert rank_biserial(np.array([1.0, 2.0]), np.array([1.0, 2.0])) == 0.0
+
+
+def test_bootstrap_median_ci() -> None:
+    assert bootstrap_median_ci(np.full(20, 0.7)) == pytest.approx((0.7, 0.7, 0.7))
+    x = np.random.default_rng(0).normal(size=50)
+    med, lo, hi = bootstrap_median_ci(x)
+    assert lo <= med <= hi
+    assert bootstrap_median_ci(x) == (med, lo, hi)  # reproductible (SEED)
+
+
+def test_split_half_similarity() -> None:
+    rng = np.random.default_rng(0)
+    base, other = _sym(rng, 10), _sym(rng, 10)
+    noise = [0.05 * _sym(rng, 10) for _ in range(4)]
+    halves = np.stack([[base + noise[0], base + noise[1]], [other + noise[2], other + noise[3]]])  # (2 cond, 2, n, n)
+    out = split_half_similarity(halves, ("MM", "MI"), "MM", "MI", edge_spearman)
+    assert out["within"] > 0.9 and abs(out["between"]) < 0.5
+    assert out["ratio"] == pytest.approx(out["between"] / out["within"])
+    same = split_half_similarity(np.stack([halves[0], halves[0]]), ("MM", "MI"), "MM", "MI", strength_spearman(0.3))
+    assert same["ratio"] == pytest.approx(same["between"] / same["within"])
+
+
+def test_describe_graph_two_blocks() -> None:
+    w = 0.001 * _sym(np.random.default_rng(4), 10)  # fond faible : graphe complet connexe
+    w[:4, :4] = 0.9
+    w[4:8, 4:8] = 0.8
+    np.fill_diagonal(w, 0)
+    desc = describe_graph(w, _ATLAS, density=12 / 45, n_louvain_runs=5)  # garde les 12 arêtes des deux blocs
+    rec = desc.record
+    assert rec["n_edges"] == 12 and rec["n_components"] == 4
+    assert rec["isolated_nodes"] == "x3-rh, x4-rh"
+    assert rec["diameter_largest_component"] == 1
+    assert rec["n_edges_mst_union"] == 15  # + 3 arêtes de l'arbre pour relier 4 composantes
+    assert int(str(rec["diameter_mst_union"])) >= 2
+    assert int(str(rec["n_communities"])) >= 2
+    tops = top_regions(desc.metrics, k=4)
+    assert set(tops.strength) == set(_NAMES[:4])
+
+
+def test_graph_global_metrics_ranges() -> None:
+    out = graph_global_metrics(_sym(np.random.default_rng(1), 12), 0.3, n_louvain_runs=3)
+    assert set(out) == {"global_efficiency_weighted", "clustering_weighted", "modularity"}
+    assert 0 < out["global_efficiency_weighted"] < 1 and 0 <= out["clustering_weighted"] <= 1
+
+
+def test_hubs_modules_and_confound() -> None:
+    strength = np.arange(10.0)
+    assert top_hubs(strength, _ATLAS, k=2) == ["x4-rh", "x3-rh"]
+    assert jaccard(["a", "b"], ["b", "c"]) == pytest.approx(1 / 3)
+    labels = np.array([0, 0, 0, 1, 1, 1, 0, 1, 2, 2])  # ROI : 3 dans 0, 3 dans 1 ; ex aequo -> plus petite
+    assert sensorimotor_module(labels, _ATLAS) == ["precentral-lh", "precentral-rh", "postcentral-lh", "x1-lh"]
+    labels = np.array([0, 0, 0, 0, 1, 1, 0, 1, 2, 2])
+    assert sensorimotor_module(labels, _ATLAS) == [
+        "precentral-lh",
+        "precentral-rh",
+        "postcentral-lh",
+        "postcentral-rh",
+        "x1-lh",
+    ]
+    rng = np.random.default_rng(2)
+    power = rng.normal(size=(15, 3, 10))
+    strength_s = np.repeat(power[:, :, :], 1, axis=0) * 2 + 1  # Δ strength monotone en Δ puissance
+    out = power_strength_confound(power, strength_s, _ATLAS)
+    assert out["rho"] == pytest.approx(1.0) and out["n"] == 15
+
+
+def test_global_metric_tests_and_robustness() -> None:
+    rng = np.random.default_rng(3)
+    rows = []
+    for s in range(12):
+        for d in (0.1, 0.15):
+            for cond, shift in (("MM", 0.2), ("MI", 0.1), ("REST", 0.0)):
+                rows.append(
+                    {"subject": s, "condition": cond, "band": "alpha", "density": d}
+                    | {
+                        m: shift + 0.01 * rng.normal()
+                        for m in ("global_efficiency_weighted", "clustering_weighted", "modularity")
+                    }
+                )
+    tests = global_metric_tests(pd.DataFrame(rows))
+    assert len(tests) == 18  # 2 densités × 3 métriques × 3 comparaisons
+    assert (tests.r_rb == 1).all() and (tests.p_holm >= tests.p).all()
+    sims = pd.DataFrame(
+        [
+            {
+                "band": "alpha",
+                "density": np.nan,
+                "measure": "edges",
+                "comparison": "MM vs MI",
+                "r_rb": -1.0,
+                "p_holm": 0.001,
+            },
+            {
+                "band": "alpha",
+                "density": 0.1,
+                "measure": "strength",
+                "comparison": "MM vs MI",
+                "r_rb": 0.2,
+                "p_holm": 0.5,
+            },
+            {
+                "band": "alpha",
+                "density": 0.15,
+                "measure": "strength",
+                "comparison": "MM vs MI",
+                "r_rb": -0.3,
+                "p_holm": 0.2,
+            },
+        ]
+    )
+    table = robustness_table(tests, sims)
+    assert list(table.columns) == ["alpha 10 %", "alpha 15 %"]
+    assert table.loc["similarité edges : MM vs MI (entre vs intra)"].str.endswith("✓").all()
+    assert str(table.loc["similarité strength : MM vs MI (entre vs intra)", "alpha 10 %"]).endswith("✗")
+    assert str(table.loc["modularity : MM vs MI", "alpha 10 %"]).startswith("+")

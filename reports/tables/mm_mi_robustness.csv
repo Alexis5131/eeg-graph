@@ -1,0 +1,16 @@
+result,alpha 10 %,alpha 15 %,alpha 20 %,beta 10 %,beta 15 %,beta 20 %
+clustering_weighted : MI vs REST,+ p=1 ✓,+ p=1 ✓,+ p=0.86 ✓,+ p=1 ✗,− p=1 ✓,+ p=1 ✗
+clustering_weighted : MM vs MI,− p=1 ✓,− p=1 ✓,− p=0.84 ✓,− p=1 ✓,− p=1 ✓,− p=1 ✓
+clustering_weighted : MM vs REST,− p=1 ✗,+ p=1 ✓,− p=1 ✗,+ p=1 ✗,− p=1 ✓,− p=1 ✓
+global_efficiency_weighted : MI vs REST,− p=1 ✓,− p=1 ✓,+ p=1 ✗,+ p=1 ✗,− p=0.73 ✓,+ p=1 ✗
+global_efficiency_weighted : MM vs MI,− p=0.45 ✓,− p=0.078 ✓,− p=0.021 * ✗,− p=1 ✓,− p=0.6 ✓,− p=0.18 ✓
+global_efficiency_weighted : MM vs REST,− p=0.031 * ✗,− p=0.059 ✓,− p=0.2 ✓,− p=0.92 ✗,− p=0.0093 * ✓,− p=0.062 ✗
+modularity : MI vs REST,− p=1 ✓,− p=1 ✓,− p=0.91 ✓,− p=0.075 ✗,− p=0.0048 * ✓,− p=0.011 * ✓
+modularity : MM vs MI,− p=1 ✓,− p=1 ✓,− p=1 ✓,− p=0.87 ✓,− p=0.73 ✓,− p=0.34 ✓
+modularity : MM vs REST,− p=0.45 ✓,− p=1 ✓,− p=0.91 ✓,− p=0.00011 * ✓,− p=5.4e-05 * ✓,− p=2.8e-05 * ✓
+similarité edges : MI vs REST (entre vs intra),− p=3.8e-11 * ✓,− p=3.8e-11 * ✓,− p=3.8e-11 * ✓,− p=1.5e-15 * ✓,− p=1.5e-15 * ✓,− p=1.5e-15 * ✓
+similarité edges : MM vs MI (entre vs intra),− p=6.1e-11 * ✓,− p=6.1e-11 * ✓,− p=6.1e-11 * ✓,− p=1.3e-16 * ✓,− p=1.3e-16 * ✓,− p=1.3e-16 * ✓
+similarité edges : MM vs REST (entre vs intra),− p=9e-12 * ✓,− p=9e-12 * ✓,− p=9e-12 * ✓,− p=7.4e-17 * ✓,− p=7.4e-17 * ✓,− p=7.4e-17 * ✓
+similarité strength : MI vs REST (entre vs intra),− p=1.7e-08 * ✓,− p=1.3e-08 * ✓,− p=2.8e-08 * ✓,− p=2.8e-12 * ✓,− p=1.1e-12 * ✓,− p=5e-13 * ✓
+similarité strength : MM vs MI (entre vs intra),− p=9.8e-07 * ✓,− p=1.5e-06 * ✓,− p=6.6e-08 * ✓,− p=2.5e-15 * ✓,− p=1.5e-14 * ✓,− p=1e-14 * ✓
+similarité strength : MM vs REST (entre vs intra),− p=2.7e-07 * ✓,− p=8.6e-08 * ✓,− p=6.6e-08 * ✓,− p=4.2e-14 * ✓,− p=1.5e-14 * ✓,− p=2.3e-14 * ✓
