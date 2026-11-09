@@ -10,15 +10,20 @@ même réseau.
 
 1. **Validation physiologique** : la puissance alpha/bêta baisse sur le cortex sensorimoteur pendant MM et MI
    (ERD, 105 sujets, p < 1e-15), plus fortement en MM (90 et 97 sujets sur 105, p < 1e-13).
-2. **Même architecture** : MM et MI ont les mêmes hubs (Jaccard des 7 hubs = 1.00 en alpha, 0.75 en bêta), le
-   même module sensorimoteur (Jaccard 0.75 et 0.94) et aucune métrique globale différente (p de Holm ≥ 0.078).
+2. **Même architecture, partagée avec le repos** : MM et MI ont les mêmes hubs (Jaccard des 7 hubs = 1.00 en
+   alpha, 0.75 en bêta) et le même module sensorimoteur (Jaccard 0.75 et 0.94) ; les hubs sont en majorité ceux
+   du repos (Jaccard 0.75). Aucune métrique globale ne diffère après correction de Holm (p ≥ 0.078), mais ce
+   n'est pas une équivalence : l'efficacité globale est un peu plus faible en MM qu'en MI (d_z = −0.28 en alpha,
+   IC 90 % [−0.45 ; −0.12] ; −0.21 en bêta, [−0.36 ; −0.05]).
 3. **Ressemblance quasi maximale mais pas totale** : les arêtes MM–MI atteignent 94-96 % du plafond
    intra-condition (moitiés aléatoires) et 95-97 % d'un plafond par run à distance temporelle appariée ;
    IC 95 % bootstrap sous 1.
 4. **Effets de tâche partagés** : en bêta, la strength de la ROI sensorimotrice augmente autant en MM qu'en MI
    par rapport au repos (r = 0.45 et 0.48, p de Holm ≤ 5e-5) ; rien de tel en alpha.
-5. **Conclusion** : un même réseau, faiblement mais reproductiblement modulé par la condition (94 % des
-   conclusions tiennent aux seuils 10 / 20 %). Détails, figures et limites : `reports/results_summary.md`.
+5. **Conclusion** : une même organisation de réseau, dominée par une structure stable commune aux trois
+   conditions et faiblement mais reproductiblement modulée par la condition (94 % des conclusions tiennent aux
+   seuils 10 / 20 %). Le wPLI par epoch de 3.5 s a un plancher non nul sous indépendance (0.22-0.28 en alpha,
+   0.13-0.16 en bêta, `reports/wpli_null_floor.json`). Détails, figures et limites : `reports/results_summary.md`.
 
 ## Données
 
@@ -61,7 +66,8 @@ RAM pour 4 workers (~1.2 Go par worker). Temps mesurés sur un Mac 8 cœurs, 16 
 | 3 | `notebooks/01_eeg_to_graph.ipynb` | validation de la chaîne sur le repos yeux ouverts / fermés (effet Berger, V1-V6), graphe et métriques d'un sujet | 59 s (données présentes) ; au premier lancement, + téléchargement de R01/R02 et de fsaverage | ~60 Mo de cache |
 | 4 | `notebooks/02_task_erd_validation.ipynb` | découpage des runs de tâche et contrôle ERD sur les sujets 1-10 | 17 s si le cache existe ; sinon il calcule les 10 sujets (~100 s sur 4 workers + téléchargements) | inclus dans l'étape 1 |
 | 5 | `notebooks/03_mm_vs_mi.ipynb` | **analyse** : graphes de groupe, comparaison par sujet, robustesse, conclusion | 2-3 min (134 s mesurées ; 173 s sur un clone neuf) | < 5 Mo de sorties |
-| 6 | `uv run python scripts/make_results_summary.py` | régénère `reports/results_summary.md` depuis les tableaux, JSON et cellules « Conclusion » / « Limites » du notebook 03 | < 5 s | < 50 ko |
+| 6 | `uv run python scripts/wpli_null_floor.py` | plancher du wPLI par epoch sous indépendance (simulation, même filtre, même durée et même nombre d'epochs que l'analyse) → `reports/wpli_null_floor.json` | 3 s | < 5 ko |
+| 7 | `uv run python scripts/make_results_summary.py` | régénère `reports/results_summary.md` depuis les tableaux, JSON et cellules « Conclusion » / « Limites » du notebook 03 | < 5 s | < 50 ko |
 
 Un notebook s'exécute sans interface avec :
 
