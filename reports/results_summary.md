@@ -5,19 +5,22 @@ Synthèse pour le rapport et les slides. Tous les chiffres viennent des fichiers
 
 ## Conclusion (notebook 03)
 
-**En grande partie le même réseau.** MM et MI partagent les mêmes hubs (Jaccard des 7 hubs = 1.00 en alpha,
-0.75 en bêta) et le même module sensorimoteur (Jaccard 0.75 et 0.94), et ne diffèrent sur aucune métrique
-globale au seuil de 15 % (p de Holm ≥ 0.078). Face au plafond par run, qui intègre la variabilité d'un run à
-l'autre, la ressemblance des arêtes MM–MI atteint 96 % du plafond en alpha et 99.5 % en bêta (IC 95 %
-98.8-100.4 %) quand on prend les 9 paires de runs, mais ces paires sont plus proches dans le temps (3.9 contre
-5.3 runs d'écart) et la ressemblance diminue avec la distance entre runs. À distance appariée (5.3 runs des
-deux côtés), MM–MI reste sous le plafond : 95 % en alpha (IC 92-96 %) et 97 % en bêta (97-98 %) pour les
-arêtes, ratio < 1 chez 78 et 88 sujets sur 104 (p de Holm ≤ 6e-9), proche des 94 et 96 % du plafond
-aléatoire. Cet écart lié à la condition est faible, du même ordre que l'écart de chaque tâche avec le repos,
-et l'effet de tâche le plus net est commun aux deux : en bêta, la strength de la ROI sensorimotrice augmente
-autant en MM qu'en MI par rapport au repos (r = 0.45 et 0.48, p de Holm ≤ 5e-5). Mouvement réel et imaginé
-reposent donc sur un même réseau, modulé faiblement mais de façon reproductible par la condition (94 % des
-conclusions tiennent aux seuils de 10 et 20 %), sous les réserves de la cellule « Limites ».
+**Une même organisation, qui est aussi celle du repos.** MM et MI partagent les mêmes hubs (Jaccard des 7 hubs
+= 1.00 en alpha, 0.75 en bêta) et le même module sensorimoteur (Jaccard 0.75 et 0.94). Après correction de
+Holm, aucune métrique globale ne diffère au seuil de 15 % (p ≥ 0.078), mais ce n'est pas une équivalence :
+l'efficacité globale est un peu plus faible en MM qu'en MI ($d_z$ = −0.28 en alpha, IC 90 % [−0.45 ; −0.12] ;
+−0.21 en bêta, [−0.36 ; −0.05]), un IC qui exclut 0 aux trois seuils, et de la même taille que l'écart MM vs
+repos ; le clustering, lui, reste dans ±0.22. Face au plafond par run, à distance temporelle appariée, la
+ressemblance des arêtes MM–MI atteint 95 % du plafond en alpha (IC 92-96 %) et 97 % en bêta (97-98 %), ratio
+< 1 chez 78 et 88 sujets sur 104 (p de Holm ≤ 6e-9), proche des 94 et 96 % du plafond aléatoire ; avec toutes
+les paires de runs, plus proches dans le temps, le ratio approche 1 (bêta : 99.5 %, IC contenant 1). Ces
+écarts sont du même ordre que ceux de chaque tâche avec le repos, dont les hubs sont en majorité les mêmes :
+la connectivité est dominée par une structure stable, commune aux trois conditions. Ce que la tâche modifie
+est faible et en partie commun : en bêta, la strength de la ROI sensorimotrice augmente autant en MM qu'en MI
+par rapport au repos (r = 0.45 et 0.48, p de Holm ≤ 5e-5), et les deux sont moins modulaires que le repos.
+Mouvement réel et imaginé reposent donc sur la même organisation de réseau, modulée faiblement mais de façon
+reproductible par la condition (94 % des conclusions tiennent aux seuils de 10 et 20 %), avec une efficacité
+globale un peu plus basse en MM, sous les réserves de la cellule « Limites ».
 
 ## 1. Ressemblance MM vs MI rapportée à un plafond intra-condition
 
@@ -83,6 +86,17 @@ dominent les boîtes « entre » pour les trois paires de conditions, les deux b
 - **Biais run-à-run du plafond aléatoire** : les moitiés A et B mélangent les mêmes runs, alors que MM et MI
   viennent de runs différents ; le plafond 1 est optimiste. Le plafond 2 (par run) le corrige, mais ses
   paires « entre » sont plus proches dans le temps ; seule la comparaison à distance appariée équilibre les deux.
+- **Plancher du wPLI** : le wPLI est estimé dans chaque epoch de 3.5 s sur ses échantillons temporels, puis
+  moyenné sur les epochs. Entre séries indépendantes, il vaut en moyenne 0.22 (bruit blanc) à 0.28 (bruit à pic
+  alpha) en alpha et 0.13 à 0.16 en bêta, contre 0.30 et 0.24 observés (`scripts/wpli_null_floor.py`,
+  `reports/wpli_null_floor.json`). Ce biais est le même entre conditions à nombre et durée d'epochs égaux, mais
+  dépend de la forme du spectre, donc en partie de la puissance : il peut contribuer à la confusion puissance /
+  connectivité en alpha (hypothèse non testée).
+- **Hubs et ressemblance partagés avec le repos** : les hubs de MM et MI sont en majorité ceux de REST (Jaccard
+  0.75) et les ratios MM vs REST et MI vs REST sont du même ordre que MM vs MI. Ces mesures décrivent surtout
+  une structure stable commune aux trois conditions ; elles ne séparent pas mieux MM de MI que la tâche du repos.
+- **Absence de différence ≠ équivalence** : aucune marge d'équivalence n'a été fixée avant l'analyse ; les IC à
+  90 % des $d_z$ (`tables/mm_mi_global_effects.csv`) indiquent les tailles d'effet que les données excluent.
 
 ## 3. Figures et tableaux pour le rapport
 
@@ -127,8 +141,17 @@ nœuds isolés sont surtout frontaux (medialorbitofrontal-lh, parstriangularis-l
 
 Figures : `figures/mm_mi_group_matrices_{alpha,beta}.png` (matrices MM / MI / REST côte à côte, même échelle) et
 `figures/mm_mi_group_brain_{MM,MI,REST}_{alpha,beta}.png` (vues cérébrales colorées par communauté).
-Top 10 par strength, betweenness et eigenvector : `tables/mm_mi_group_top10.csv` (paracentral-lh est 1er en
-strength et en betweenness en alpha dans les trois conditions).
+Top 10 par strength, betweenness, closeness et eigenvector : `tables/mm_mi_group_top10.csv` (paracentral-lh est
+1er en strength et en betweenness en alpha dans les trois conditions). Top 3 par centralité :
+
+| bande | condition | strength | betweenness | closeness | eigenvector |
+|---|---|---|---|---|---|
+| alpha | MM | paracentral-lh, superiortemporal-lh, bankssts-lh | paracentral-lh, bankssts-lh, posteriorcingulate-rh | paracentral-lh, pericalcarine-lh, fusiform-rh | paracentral-lh, pericalcarine-lh, supramarginal-lh |
+| alpha | MI | paracentral-lh, bankssts-lh, pericalcarine-lh | paracentral-lh, bankssts-lh, posteriorcingulate-rh | paracentral-lh, pericalcarine-lh, bankssts-lh | paracentral-lh, pericalcarine-lh, bankssts-lh |
+| alpha | REST | paracentral-lh, bankssts-lh, pericalcarine-lh | paracentral-lh, bankssts-lh, posteriorcingulate-rh | pericalcarine-lh, paracentral-lh, fusiform-rh | pericalcarine-lh, paracentral-lh, bankssts-lh |
+| beta | MM | paracentral-lh, supramarginal-lh, bankssts-lh | paracentral-lh, bankssts-lh, supramarginal-lh | paracentral-lh, supramarginal-lh, posteriorcingulate-rh | posteriorcingulate-rh, paracentral-lh, supramarginal-lh |
+| beta | MI | supramarginal-lh, bankssts-lh, paracentral-lh | paracentral-lh, bankssts-lh, superiortemporal-lh | paracentral-lh, posteriorcingulate-rh, supramarginal-lh | posteriorcingulate-rh, supramarginal-lh, bankssts-lh |
+| beta | REST | bankssts-lh, supramarginal-lh, posteriorcingulate-rh | bankssts-lh, paracentral-lh, posteriorcingulate-rh | posteriorcingulate-rh, bankssts-lh, paracentral-lh | posteriorcingulate-rh, supramarginal-lh, bankssts-lh |
 
 ### Métriques globales par sujet (15 %, Holm sur 9 tests par bande)
 
@@ -155,8 +178,36 @@ strength et en betweenness en alpha dans les trois conditions).
 | beta | modularité | MM vs REST | 0.2793 | 0.295 | 1366 | 5.4e-05 | -0.5091 |
 | beta | modularité | MI vs REST | 0.2854 | 0.295 | 1709 | 0.0048 | -0.3858 |
 
-Phrase clé : aucune différence MM vs MI après correction ; en bêta, MM et MI sont moins modulaires que le repos
-(r = −0.51 et −0.39) et MM moins efficace que le repos (r = −0.36).
+Phrase clé : aucune différence MM vs MI après correction de Holm à 15 % ; en bêta, MM et MI sont moins modulaires
+que le repos (r = −0.51 et −0.39) et MM moins efficace que le repos (r = −0.36).
+
+**Tailles d'effet** (`tables/mm_mi_global_effects.csv`) : d_z apparié (moyenne / écart-type des différences par
+sujet), IC 90 % bootstrap (5 000 tirages). Un TOST de marge Δ conclut à l'équivalence si l'IC 90 % est dans
+(−Δ, Δ) ; « marge minimale d'équivalence » = plus petite Δ qui le permettrait (aucune marge fixée a priori).
+
+| bande | métrique | comparaison | d_z | IC 90 % | marge minimale d'équivalence |
+|---|---|---|---|---|---|
+| alpha | efficacité | MM vs MI | -0.279 | [-0.45 ; -0.12] | 0.447 |
+| alpha | efficacité | MM vs REST | -0.297 | [-0.45 ; -0.15] | 0.453 |
+| alpha | efficacité | MI vs REST | -0.062 | [-0.23 ; 0.10] | 0.229 |
+| alpha | clustering | MM vs MI | -0.049 | [-0.21 ; 0.11] | 0.211 |
+| alpha | clustering | MM vs REST | 0.054 | [-0.11 ; 0.22] | 0.215 |
+| alpha | clustering | MI vs REST | 0.101 | [-0.06 ; 0.27] | 0.268 |
+| alpha | modularité | MM vs MI | 0.005 | [-0.17 ; 0.16] | 0.165 |
+| alpha | modularité | MM vs REST | -0.112 | [-0.28 ; 0.04] | 0.284 |
+| alpha | modularité | MI vs REST | -0.115 | [-0.28 ; 0.05] | 0.284 |
+| beta | efficacité | MM vs MI | -0.211 | [-0.36 ; -0.05] | 0.36 |
+| beta | efficacité | MM vs REST | -0.316 | [-0.49 ; -0.16] | 0.49 |
+| beta | efficacité | MI vs REST | -0.045 | [-0.22 ; 0.11] | 0.224 |
+| beta | clustering | MM vs MI | -0.049 | [-0.22 ; 0.11] | 0.218 |
+| beta | clustering | MM vs REST | -0.101 | [-0.26 ; 0.06] | 0.262 |
+| beta | clustering | MI vs REST | -0.054 | [-0.22 ; 0.11] | 0.218 |
+| beta | modularité | MM vs MI | -0.169 | [-0.33 ; -0.01] | 0.33 |
+| beta | modularité | MM vs REST | -0.471 | [-0.65 ; -0.31] | 0.647 |
+| beta | modularité | MI vs REST | -0.33 | [-0.52 ; -0.16] | 0.52 |
+
+Phrase clé : l'absence de différence significative n'est pas une équivalence ; l'efficacité globale est un peu
+plus faible en MM qu'en MI (alpha : d_z = -0.28 [-0.45 ; -0.12] ; beta : d_z = -0.21 [-0.36 ; -0.05]), un effet de la même taille que MM vs repos.
 
 ### Hubs (7 régions de plus forte strength moyenne) et ROI sensorimotrice
 
@@ -250,6 +301,20 @@ Phrase clé : en alpha, les sujets dont la puissance baisse le plus en MM perden
 
 Phrase clé : la ressemblance « entre < intra » tient partout ; les seuls changements portent sur l'efficacité
 globale et la modularité MI vs REST en bêta à 10 %.
+
+### Plancher du wPLI sous indépendance
+
+`wpli_null_floor.json` (`scripts/wpli_null_floor.py`) : wPLI attendu entre séries indépendantes avec l'estimateur
+de la chaîne (epochs de 3.5 s, 42 epochs, wPLI par epoch puis moyenne), moyenne ±
+écart-type sur 5 simulations.
+
+| bande | plancher bruit blanc | plancher bruit à pic alpha | wPLI observé (moyenne) | P5-P95 des arêtes, groupe REST |
+|---|---|---|---|---|
+| alpha | 0.215 ± 0.002 | 0.276 ± 0.003 | 0.300 | 0.265-0.366 |
+| beta | 0.127 ± 0.001 | 0.163 ± 0.002 | 0.235 | 0.168-0.368 |
+
+Phrase clé : sur des epochs de 3.5 s, le wPLI n'est pas centré sur 0 sous indépendance ; ce biais dépend de la
+forme du spectre (plus élevé avec un pic alpha), donc en partie de la puissance.
 
 ### Validation de la chaîne sur le repos (notebook 01)
 
