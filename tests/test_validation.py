@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from eeg_graph.cache import RecordingResult, result_path, save_result
-from eeg_graph.config import Paths
+from eeg_graph.config import BANDS, Paths
 from eeg_graph.nodes import Atlas
 from eeg_graph.validation import (
     MOTOR_ROI,
@@ -20,6 +20,7 @@ from eeg_graph.validation import (
     roi_mean,
     roi_top_check,
     task_erd_report,
+    wpli_null_floor,
 )
 
 _NAMES = (*MOTOR_ROI, *(f"r{i}-lh" for i in range(14)))  # 6 régions ROI + 14 autres
@@ -145,3 +146,12 @@ def test_cohort_erd_streams_from_cache(tmp_path: Path) -> None:
     np.testing.assert_allclose(
         erds["mi_lr", "alpha"], np.stack([expected[1, "mi_lr"], expected[2, "mi_lr"]]), rtol=1e-6
     )
+
+
+def test_wpli_null_floor_positive_and_shrinks_with_epoch_length() -> None:
+    alpha = next(b for b in BANDS if b.name == "alpha")
+    short = wpli_null_floor(alpha, 160.0, 3.5, n_epochs=8, noise="white", n_nodes=5, seed=0)
+    long = wpli_null_floor(alpha, 160.0, 14.0, n_epochs=8, noise="white", n_nodes=5, seed=0)
+    peaked = wpli_null_floor(alpha, 160.0, 3.5, n_epochs=8, noise="alpha_peak", n_nodes=5, seed=0)
+    assert 0.05 < long < short < 1  # biais positif sous indépendance, plus faible sur des epochs longues
+    assert 0.05 < peaked < 1

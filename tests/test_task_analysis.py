@@ -167,13 +167,17 @@ def test_cohort_table_inclusion(tmp_path: Path) -> None:
 
 from eeg_graph.nodes import Atlas  # noqa: E402
 from eeg_graph.task_analysis import (  # noqa: E402
+    align_partition,
     bootstrap_median_ci,
     describe_graph,
     edge_spearman,
+    global_metric_effects,
     global_metric_tests,
     graph_global_metrics,
     holm,
     jaccard,
+    paired_dz_ci,
+    partition_similarity,
     power_strength_confound,
     rank_biserial,
     robustness_table,
@@ -243,6 +247,50 @@ def test_describe_graph_two_blocks() -> None:
     assert int(str(rec["n_communities"])) >= 2
     tops = top_regions(desc.metrics, k=4)
     assert set(tops.strength) == set(_NAMES[:4])
+    assert {"closeness", "closeness_valeur"} <= set(tops.columns)
+    assert set(tops.closeness) == set(_NAMES[:4])  # bloc le plus fort : plus proche de ses voisins (1 / 0.9)
+
+
+def test_paired_dz_ci() -> None:
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=200)
+    shifted = paired_dz_ci(x + 0.5 + 0.5 * rng.normal(size=200), x, 2000, 0.90, np.random.default_rng(1))
+    assert shifted["d_z"] == pytest.approx(1.0, abs=0.2)  # d = 0.5 + N(0, 0.5²) : d_z = 1
+    assert shifted["ci_low"] < shifted["d_z"] < shifted["ci_high"] and shifted["ci_low"] > 0
+    null = paired_dz_ci(x + rng.normal(size=200), x, 2000, 0.90, np.random.default_rng(1))
+    assert null["ci_low"] < 0 < null["ci_high"]
+    assert null["equivalence_bound"] == max(abs(null["ci_low"]), abs(null["ci_high"]))
+    y = x + rng.normal(size=200)
+    assert paired_dz_ci(y, x, 500, 0.90, np.random.default_rng(7)) == paired_dz_ci(
+        y, x, 500, 0.90, np.random.default_rng(7)
+    )
+    assert shifted["n"] == 200
+
+
+def test_global_metric_effects_shape_and_sign() -> None:
+    rng = np.random.default_rng(3)
+    rows = [
+        {"subject": s, "condition": cond, "band": "alpha", "density": 0.15}
+        | {m: shift + 0.1 * rng.normal() for m in ("global_efficiency_weighted", "clustering_weighted", "modularity")}
+        for s in range(30)
+        for cond, shift in (("MM", 0.2), ("MI", 0.2), ("REST", 0.0))
+    ]
+    effects = global_metric_effects(pd.DataFrame(rows), n_boot=500)
+    assert len(effects) == 9 and (effects.level == 0.90).all()
+    assert (effects[effects.comparison == "MM vs REST"].ci_low > 0).all()
+    assert effects.equals(global_metric_effects(pd.DataFrame(rows), n_boot=500))  # reproductible
+
+
+def test_align_partition() -> None:
+    reference = np.array([0, 0, 0, 1, 1, 2, 2, 2])
+    permuted = np.array([5, 5, 5, 3, 3, 7, 7, 7])
+    assert align_partition(reference, permuted).tolist() == reference.tolist()
+    extra = np.array([1, 1, 1, 0, 0, 2, 2, 9])  # 9 : communauté en plus (meilleure affectation : 2 -> 2)
+    aligned = align_partition(reference, extra)
+    assert aligned.tolist() == [0, 0, 0, 1, 1, 2, 2, 3]
+    assert partition_similarity(reference, aligned) == partition_similarity(reference, extra)
+    with pytest.raises(ValueError):
+        align_partition(reference, extra[:-1])
 
 
 def test_graph_global_metrics_ranges() -> None:

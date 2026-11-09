@@ -13,7 +13,9 @@ Analyse (notebook 03) : graphes de groupe (description), métriques globales par
 (Wilcoxon, correction de Holm, corrélation rang-bisériale), similarité entre conditions rapportée à la
 similarité intra-condition à nombre d'epochs égal (n // 2), hubs, communautés, robustesse au seuil.
 Références : Holm S. (1979), Scand J Stat 6(2):65-70 ; corrélation rang-bisériale appariée :
-Kerby D. S. (2014), Compr Psychol 3:11.IT.3.1 ; méthodes reprises des articles, pas de code.
+Kerby D. S. (2014), Compr Psychol 3:11.IT.3.1 ; équivalence (TOST) : Schuirmann D. J. (1987),
+J Pharmacokinet Biopharm 15(6):657-680, Lakens D. (2017), Soc Psychol Personal Sci 8(4):355-362 ;
+méthodes reprises des articles, pas de code.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from numpy.typing import NDArray
+from scipy.optimize import linear_sum_assignment
 from scipy.stats import rankdata, spearmanr, wilcoxon
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
@@ -407,7 +410,9 @@ def describe_graph(
 
 
 def top_regions(
-    m: GraphMetrics, k: int = 10, measures: Sequence[str] = ("strength", "betweenness", "eigenvector")
+    m: GraphMetrics,
+    k: int = 10,
+    measures: Sequence[str] = ("strength", "betweenness", "closeness", "eigenvector"),
 ) -> pd.DataFrame:
     """Les k régions de plus forte valeur pour chaque centralité : colonnes « mesure » et « mesure_valeur »."""
     out: dict[str, list[object]] = {"rang": list(range(1, k + 1))}
@@ -548,6 +553,57 @@ def global_metric_tests(
         for row, p_adj in zip(block, holm(pvals), strict=True):
             row["p_holm"] = float(p_adj)
         rows.extend(block)
+    return pd.DataFrame(rows)
+
+
+def paired_dz_ci(
+    x: NDArray[np.floating], y: NDArray[np.floating], n_boot: int, level: float, rng: np.random.Generator
+) -> dict[str, float]:
+    """Taille d'effet appariée d_z = moyenne(d) / écart-type(d), d = x - y, et IC bootstrap percentile (sujets).
+
+    `equivalence_bound` = max(|borne basse|, |borne haute|) : plus petite marge Δ (en unités de d_z) pour laquelle
+    un TOST au niveau (1 - level) / 2 conclurait à l'équivalence, puisque TOST ⇔ IC à `level` inclus dans (-Δ, Δ)
+    (Schuirmann 1987 ; Lakens 2017).
+    """
+    d = np.asarray(x, dtype=np.float64) - np.asarray(y, dtype=np.float64)
+    boot = d[rng.integers(0, d.size, size=(n_boot, d.size))]  # (n_boot, n_sujets)
+    boot_dz = boot.mean(axis=1) / boot.std(axis=1, ddof=1)
+    alpha = (1.0 - level) / 2.0
+    low, high = (float(q) for q in np.quantile(boot_dz, [alpha, 1.0 - alpha]))
+    return {
+        "n": int(d.size),
+        "mean_diff": float(d.mean()),
+        "d_z": float(d.mean() / d.std(ddof=1)),
+        "ci_low": low,
+        "ci_high": high,
+        "equivalence_bound": max(abs(low), abs(high)),
+    }
+
+
+def global_metric_effects(
+    table: pd.DataFrame,
+    metrics: Sequence[str] = GLOBAL_METRICS,
+    comparisons: Sequence[tuple[str, str]] = COMPARISONS,
+    n_boot: int = 5000,
+    level: float = 0.90,
+    seed: int = SEED,
+) -> pd.DataFrame:
+    """d_z apparié et IC à `level` par (bande, densité, métrique, comparaison) : complète `global_metric_tests`.
+
+    Une absence de différence significative ne montre pas l'équivalence ; l'IC à 90 % indique quelles tailles
+    d'effet les données excluent. Une graine par ligne, dérivée de `seed` : résultat reproductible.
+    """
+    rows: list[dict[str, object]] = []
+    for (band, density), sub in table.groupby(["band", "density"], sort=True):
+        for m in metrics:
+            wide = sub.pivot(index="subject", columns="condition", values=m)
+            for a, b in comparisons:
+                rng = np.random.default_rng([seed, len(rows)])
+                effect = paired_dz_ci(wide[a].to_numpy(), wide[b].to_numpy(), n_boot, level, rng)
+                rows.append(
+                    {"band": band, "density": density, "metric": m, "comparison": f"{a} vs {b}", "level": level}
+                    | effect
+                )
     return pd.DataFrame(rows)
 
 
@@ -926,6 +982,32 @@ def sensorimotor_module(labels: NDArray[np.integer], atlas: Atlas, roi: Sequence
 
 def partition_similarity(a: NDArray[np.integer], b: NDArray[np.integer]) -> dict[str, float]:
     return {"nmi": float(normalized_mutual_info_score(a, b)), "ari": float(adjusted_rand_score(a, b))}
+
+
+def align_partition(reference: NDArray[np.integer], labels: NDArray[np.integer]) -> NDArray[np.int64]:
+    """Renomme les communautés de `labels` d'après celles de `reference` qu'elles recouvrent le plus.
+
+    Affectation optimale (méthode hongroise) sur le tableau de recouvrement des deux partitions des mêmes nœuds ;
+    les communautés sans correspondante reçoivent de nouveaux labels (par effectif décroissant) après le plus
+    grand label de `reference`. Simple renommage : NMI et ARI inchangés. Sert à colorer pareil les figures.
+    """
+    ref = np.asarray(reference, dtype=np.int64)
+    lab = np.asarray(labels, dtype=np.int64)
+    if ref.shape != lab.shape:
+        raise ValueError(f"Partitions de tailles différentes : {ref.shape} et {lab.shape}")
+    ref_ids, ref_idx = np.unique(ref, return_inverse=True)
+    lab_ids, lab_idx = np.unique(lab, return_inverse=True)
+    overlap = np.zeros((lab_ids.size, ref_ids.size), dtype=np.int64)
+    np.add.at(overlap, (lab_idx, ref_idx), 1)
+    rows, cols = linear_sum_assignment(overlap, maximize=True)
+    mapping = {int(lab_ids[r]): int(ref_ids[c]) for r, c in zip(rows, cols, strict=True) if overlap[r, c] > 0}
+    unmatched = [int(i) for i in lab_ids if int(i) not in mapping]
+    unmatched.sort(key=lambda i: (-int((lab == i).sum()), i))
+    next_id = int(ref_ids.max()) + 1
+    for i in unmatched:
+        mapping[i] = next_id
+        next_id += 1
+    return np.array([mapping[int(v)] for v in lab], dtype=np.int64)
 
 
 def power_strength_confound(

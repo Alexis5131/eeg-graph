@@ -142,6 +142,59 @@ def main() -> int:
         .pipe(md_table)
     )
 
+    effects = pd.read_csv(T / "mm_mi_global_effects.csv")
+    effects = effects[effects.density.round(2) == 0.15]
+    effects_md = (
+        effects.assign(
+            metric=effects.metric.map(names),
+            ic=[f"[{lo:.2f} ; {hi:.2f}]" for lo, hi in zip(effects.ci_low, effects.ci_high, strict=True)],
+        )[["band", "metric", "comparison", "d_z", "ic", "equivalence_bound"]]
+        .rename(
+            columns={
+                "band": "bande",
+                "metric": "métrique",
+                "comparison": "comparaison",
+                "ic": "IC 90 %",
+                "equivalence_bound": "marge minimale d'équivalence",
+            }
+        )
+        .round(3)
+        .pipe(md_table)
+    )
+    eff_mm_mi = effects[(effects.comparison == "MM vs MI") & (effects.metric == "global_efficiency_weighted")]
+    eff_txt = " ; ".join(
+        f"{r.band} : d_z = {r.d_z:.2f} [{r.ci_low:.2f} ; {r.ci_high:.2f}]" for r in eff_mm_mi.itertuples()
+    )
+
+    top10 = pd.read_csv(T / "mm_mi_group_top10.csv")
+    centralities = ("strength", "betweenness", "closeness", "eigenvector")
+    top3_rows = []
+    for key, t in top10[top10.rang <= 3].groupby(["band", "condition"], sort=False):
+        ranked = t.sort_values("rang")
+        labels = dict(zip(("bande", "condition"), key, strict=True))
+        top3_rows.append(labels | {m: ", ".join(ranked[m]) for m in centralities})
+    top3_md = pd.DataFrame(top3_rows).pipe(md_table)
+
+    floor = json.loads((R / "wpli_null_floor.json").read_text())
+
+    def mean_sd(x: dict[str, float]) -> str:
+        return f"{x['mean']:.3f} ± {x['sd']:.3f}"
+
+    floor_md = md_table(
+        pd.DataFrame(
+            [
+                {
+                    "bande": band,
+                    "plancher bruit blanc": mean_sd(v["floor_white"]),
+                    "plancher bruit à pic alpha": mean_sd(v["floor_alpha_peak"]),
+                    "wPLI observé (moyenne)": f"{v['observed_mean']:.3f}",
+                    "P5-P95 des arêtes, groupe REST": "-".join(f"{q:.3f}" for q in v["observed_group_p5_p95"]["REST"]),
+                }
+                for band, v in floor["bands"].items()
+            ]
+        )
+    )
+
     hubs = pd.read_csv(T / "mm_mi_hubs.csv").pipe(md_table)
     res = json.loads((R / "mm_vs_mi_results.json").read_text())
     overlap = pd.DataFrame(res["hub_overlap"]).round(2).pipe(md_table)
@@ -268,8 +321,10 @@ nœuds isolés sont surtout frontaux (medialorbitofrontal-lh, parstriangularis-l
 
 Figures : `figures/mm_mi_group_matrices_{{alpha,beta}}.png` (matrices MM / MI / REST côte à côte, même échelle) et
 `figures/mm_mi_group_brain_{{MM,MI,REST}}_{{alpha,beta}}.png` (vues cérébrales colorées par communauté).
-Top 10 par strength, betweenness et eigenvector : `tables/mm_mi_group_top10.csv` (paracentral-lh est 1er en
-strength et en betweenness en alpha dans les trois conditions).
+Top 10 par strength, betweenness, closeness et eigenvector : `tables/mm_mi_group_top10.csv` (paracentral-lh est
+1er en strength et en betweenness en alpha dans les trois conditions). Top 3 par centralité :
+
+{top3_md}
 
 ### Métriques globales par sujet (15 %, Holm sur 9 tests par bande)
 
@@ -277,8 +332,17 @@ strength et en betweenness en alpha dans les trois conditions).
 
 {tests_md}
 
-Phrase clé : aucune différence MM vs MI après correction ; en bêta, MM et MI sont moins modulaires que le repos
-(r = −0.51 et −0.39) et MM moins efficace que le repos (r = −0.36).
+Phrase clé : aucune différence MM vs MI après correction de Holm à 15 % ; en bêta, MM et MI sont moins modulaires
+que le repos (r = −0.51 et −0.39) et MM moins efficace que le repos (r = −0.36).
+
+**Tailles d'effet** (`tables/mm_mi_global_effects.csv`) : d_z apparié (moyenne / écart-type des différences par
+sujet), IC 90 % bootstrap (5 000 tirages). Un TOST de marge Δ conclut à l'équivalence si l'IC 90 % est dans
+(−Δ, Δ) ; « marge minimale d'équivalence » = plus petite Δ qui le permettrait (aucune marge fixée a priori).
+
+{effects_md}
+
+Phrase clé : l'absence de différence significative n'est pas une équivalence ; l'efficacité globale est un peu
+plus faible en MM qu'en MI ({eff_txt}), un effet de la même taille que MM vs repos.
 
 ### Hubs (7 régions de plus forte strength moyenne) et ROI sensorimotrice
 
@@ -327,6 +391,17 @@ Phrase clé : en alpha, les sujets dont la puissance baisse le plus en MM perden
 
 Phrase clé : la ressemblance « entre < intra » tient partout ; les seuls changements portent sur l'efficacité
 globale et la modularité MI vs REST en bêta à 10 %.
+
+### Plancher du wPLI sous indépendance
+
+`wpli_null_floor.json` (`scripts/wpli_null_floor.py`) : wPLI attendu entre séries indépendantes avec l'estimateur
+de la chaîne (epochs de {floor["epoch_s"]} s, {floor["n_epochs"]} epochs, wPLI par epoch puis moyenne), moyenne ±
+écart-type sur {floor["seeds"]} simulations.
+
+{floor_md}
+
+Phrase clé : sur des epochs de 3.5 s, le wPLI n'est pas centré sur 0 sous indépendance ; ce biais dépend de la
+forme du spectre (plus élevé avec un pic alpha), donc en partie de la puissance.
 
 ### Validation de la chaîne sur le repos (notebook 01)
 

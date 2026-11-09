@@ -9,17 +9,21 @@ V6 : sensibilité au choix de l'inverse (méthode × λ²).
 Runs de tâche poing gauche / droit (R03/R07/R11 réel, R04/R08/R12 imaginé) :
 ERD : désynchronisation alpha/bêta du cortex sensorimoteur pendant le mouvement réel et imaginé
 (Pfurtscheller G., Lopes da Silva F. H. (1999), Clin Neurophysiol 110(11):1842-1857).
+
+Plancher du wPLI : valeur attendue de l'estimateur par epoch entre séries indépendantes (simulation).
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Literal
 
 import mne
 import numpy as np
 import pandas as pd
 from mne.minimum_norm import apply_inverse_epochs
 from numpy.typing import NDArray
+from scipy.signal import lfilter
 from scipy.stats import hypergeom, spearmanr, wilcoxon
 
 from eeg_graph.cache import RecordingResult, load_result, result_path, validate_connectivity
@@ -34,7 +38,7 @@ from eeg_graph.config import (
     PipelineConfig,
     band_index,
 )
-from eeg_graph.connectivity import recording_connectivity
+from eeg_graph.connectivity import band_analytic, recording_connectivity, slice_epochs, wpli
 from eeg_graph.nodes import Atlas
 from eeg_graph.pipeline import DATASET, PreparedSubject
 from eeg_graph.preprocessing import epoch_onsets, epoch_ptp, ptp_keep_mask
@@ -338,3 +342,57 @@ def cohort_erd(
     if atlas is None:
         raise ValueError("Aucun sujet avec toutes les conditions")
     return {key: np.stack(v) for key, v in rows.items()}, atlas, kept
+
+
+# --- Plancher du wPLI par epoch sous indépendance ---------------------------------------------------------------
+
+type NullNoise = Literal["white", "alpha_peak"]
+
+
+def simulate_null_sources(
+    n_nodes: int, n_times: int, sfreq: float, noise: NullNoise, rng: np.random.Generator
+) -> NDArray[np.float64]:
+    """Séries indépendantes entre nœuds (aucun couplage), (n_nodes, n_times).
+
+    "white" : bruit blanc gaussien. "alpha_peak" : AR(2) résonant à 10 Hz (pôles r·exp(±2iπf0/fs), r = 0.97)
+    plus un bruit rouge AR(1) (coefficient 0.95), pour un pic alpha au-dessus d'un fond décroissant. Amplitudes
+    choisies pour un pic visible, pas calibrées sur les données.
+    """
+    white = rng.standard_normal((n_nodes, n_times))
+    if noise == "white":
+        return white
+    r, f0 = 0.97, 10.0
+    ar2 = [1.0, -2.0 * r * np.cos(2.0 * np.pi * f0 / sfreq), r**2]
+    peak = lfilter([1.0], ar2, white, axis=-1)
+    red = lfilter([1.0], [1.0, -0.95], rng.standard_normal((n_nodes, n_times)), axis=-1)
+    return np.asarray(peak + 5.0 * red, dtype=np.float64)
+
+
+def wpli_null_floor(
+    band: Band,
+    sfreq: float,
+    epoch_s: float,
+    n_epochs: int,
+    noise: NullNoise,
+    n_nodes: int = 20,
+    seed: int = 0,
+    gap_s: float = 3.0,
+    pad_s: float = 5.0,
+) -> float:
+    """wPLI moyen attendu entre séries indépendantes, avec l'estimateur de la chaîne.
+
+    Même chaîne que les données : filtre FIR + Hilbert sur le signal continu (`band_analytic`), découpage en
+    `n_epochs` epochs de `epoch_s` secondes séparées de `gap_s`, wPLI estimé dans chaque epoch sur ses
+    échantillons temporels (`wpli`), puis moyenné sur les epochs. Sous indépendance le wPLI vrai vaut 0 ; la
+    valeur renvoyée (moyenne des paires) est donc le biais positif de l'estimateur, qui baisse quand l'epoch
+    s'allonge et dépend de la forme du spectre.
+    """
+    n_times = round(epoch_s * sfreq)
+    step = n_times + round(gap_s * sfreq)
+    pad = round(pad_s * sfreq)
+    onsets = pad + np.arange(n_epochs, dtype=np.int64) * step
+    total = int(onsets[-1]) + n_times + pad
+    y = simulate_null_sources(n_nodes, total, sfreq, noise, np.random.default_rng(seed))
+    epochs = slice_epochs(band_analytic(y, sfreq, band), onsets, n_times)  # (n_epochs, n_nodes, n_times)
+    mean_wpli = wpli(epochs).mean(axis=0)
+    return float(mean_wpli[np.triu_indices(n_nodes, 1)].mean())
